@@ -72,6 +72,21 @@
   .service h3{margin:.2rem 0 .6rem;font-size:1.15rem;color:var(--navy);}
   .service p{color:var(--muted);font-size:.95rem;margin:0;}
 
+  /* License comparison */
+  .license-compare{background:#fff2df;border-top:4px solid var(--accent);border-bottom:4px solid var(--accent);}
+  .compare-inner{display:grid;grid-template-columns:1fr 1.2fr;gap:3rem;align-items:center;}
+  .compare-copy h2{font-size:1.9rem;color:var(--navy-dark);margin:.4rem 0 1rem;}
+  .compare-copy p{color:#5a4a2e;font-size:1.02rem;}
+  .compare-table{background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.08);}
+  .compare-row{display:grid;grid-template-columns:1.3fr 1fr 1fr;font-size:.88rem;}
+  .compare-row > div{padding:.9rem 1rem;}
+  .compare-head{background:var(--navy);color:#fff;font-weight:700;}
+  .compare-row:not(.compare-head):nth-child(odd){background:#fafafa;}
+  .compare-row .cross{color:#b23b3b;}
+  .compare-row .check-mark{color:#0f8b3d;font-weight:600;}
+  .compare-row .cross::before{content:"✕ ";}
+  .compare-row .check-mark::before{content:"✓ ";}
+
   /* Architecture / DR band */
   .architecture{background:var(--navy-dark);color:#fff;}
   .architecture .section-head p{color:#b9c8d8;}
@@ -138,6 +153,8 @@
 
   @media (max-width: 860px){
     .hero .wrap{grid-template-columns:1fr;}
+    .compare-inner{grid-template-columns:1fr;}
+    .compare-row{grid-template-columns:1.1fr .8fr .8fr;font-size:.78rem;}
     .contact-grid{grid-template-columns:1fr;}
     .arch-diagram{grid-template-columns:1fr;}
     .arch-arrow{transform:rotate(90deg);}
@@ -174,18 +191,18 @@
 <section class="hero">
   <div class="wrap">
     <div>
-      <div class="eyebrow" style="color:#8ff0cf;">Enterprise Database Reliability, Standard Edition Economics</div>
-      <h1>Enterprise-grade support for <span>Oracle Standard Edition</span>, engineered like Enterprise Edition</h1>
-      <p>CloudZ13 provides custom disaster recovery, always-in-sync reporting databases, and full-lifecycle Oracle DBA support on Linux — delivering enterprise resilience without enterprise licensing costs.</p>
+      <div class="eyebrow" style="color:#8ff0cf;">Stop Overpaying for Oracle Enterprise Edition</div>
+      <h1>Why spend <span>millions on Oracle Enterprise licenses</span> when Standard Edition can do the job?</h1>
+      <p>CloudZ13 re-engineers Oracle Standard Edition with custom disaster recovery, always-in-sync reporting databases, and full-lifecycle DBA support on Linux — the same reliability Enterprise Edition promises, at a fraction of the licensing spend.</p>
       <div class="btn-row">
-        <a href="#contact" class="btn btn-primary">Request a DR Assessment</a>
+        <a href="#contact" class="btn btn-primary">Get a Free Licensing Cost Comparison</a>
         <a href="#services" class="btn btn-outline">Explore Services</a>
       </div>
     </div>
     <div class="hero-stats">
+      <div class="stat-card"><div class="num">$0</div><div class="lbl">Enterprise Edition License Fees</div></div>
       <div class="stat-card"><div class="num">5 min</div><div class="lbl">Target RPO / RTO</div></div>
       <div class="stat-card"><div class="num">24×7</div><div class="lbl">Sev-1 DBA Response</div></div>
-      <div class="stat-card"><div class="num">100%</div><div class="lbl">Linux-native Deployments</div></div>
       <div class="stat-card"><div class="num">Real-time</div><div class="lbl">Alerting & Monitoring</div></div>
     </div>
   </div>
@@ -228,6 +245,45 @@
         <div class="icon">&#9729;</div>
         <h3>Cloud & Linux Infrastructure</h3>
         <p>Deployment and automation across AWS, Azure, and OCI, with Linux-first tooling for provisioning, patch orchestration, and infrastructure-as-code.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="license-compare">
+  <div class="wrap">
+    <div class="compare-inner">
+      <div class="compare-copy">
+        <div class="eyebrow" style="color:var(--accent);">The Million-Dollar Question</div>
+        <h2>Why pay Enterprise Edition prices for features you can get on Standard Edition?</h2>
+        <p>Oracle Enterprise Edition options like Data Guard, Active Data Guard, and RAC can add <strong>millions in licensing and support costs</strong> over the life of a system. CloudZ13 engineers the same outcomes — fast failover, synced reporting, high availability — directly on Oracle Standard Edition.</p>
+      </div>
+      <div class="compare-table">
+        <div class="compare-row compare-head">
+          <div></div>
+          <div>Oracle EE Options</div>
+          <div>CloudZ13 + Oracle SE</div>
+        </div>
+        <div class="compare-row">
+          <div>Disaster Recovery (5-min RPO/RTO)</div>
+          <div class="cross">Data Guard license required</div>
+          <div class="check-mark">Included, custom-built</div>
+        </div>
+        <div class="compare-row">
+          <div>Reporting DB in Sync with Production</div>
+          <div class="cross">Active Data Guard license</div>
+          <div class="check-mark">Included, on Linux</div>
+        </div>
+        <div class="compare-row">
+          <div>24×7 Monitoring & Alerting</div>
+          <div class="cross">Separate tooling & cost</div>
+          <div class="check-mark">Included</div>
+        </div>
+        <div class="compare-row">
+          <div>Licensing Cost</div>
+          <div class="cross">$$$ millions over time</div>
+          <div class="check-mark">Standard Edition pricing</div>
+        </div>
       </div>
     </div>
   </div>
@@ -297,12 +353,12 @@
       </div>
       <div class="plan featured">
         <span class="badge">Most Popular</span>
-        <h3>Retainer Service</h3>
-        <p>Ongoing 24×7 coverage for Sev-1 issues under a monthly or annual retainer, with guaranteed response times and a dedicated senior DBA point of contact.</p>
+        <h3>DR & Reporting Setup</h3>
+        <p>One-time architecture and build-out of your disaster recovery and reporting database topology, followed by low-cost ongoing maintenance. Our #1 requested engagement.</p>
       </div>
       <div class="plan">
-        <h3>DR & Reporting Setup</h3>
-        <p>One-time architecture and build-out of your disaster recovery and reporting database topology, followed by low-cost ongoing maintenance.</p>
+        <h3>Retainer Service</h3>
+        <p>Ongoing 24×7 coverage for Sev-1 issues under a monthly or annual retainer, with guaranteed response times and a dedicated senior DBA point of contact.</p>
       </div>
     </div>
     <p class="note"><em>All services are delivered via secure remote VPN connections. Clients provide secure access to their database environments.</em></p>
