@@ -86,6 +86,18 @@
   .compare-row .check-mark{color:#0f8b3d;font-weight:600;}
   .compare-row .cross::before{content:"✕ ";}
   .compare-row .check-mark::before{content:"✓ ";}
+  .price-strip{display:flex;align-items:center;justify-content:center;gap:1.6rem;margin-top:2.8rem;flex-wrap:wrap;}
+  .price-card{background:#fff;border-radius:var(--radius);padding:1.6rem 2rem;text-align:center;min-width:240px;box-shadow:0 10px 26px rgba(0,0,0,.08);}
+  .price-ee{border-top:4px solid #b23b3b;}
+  .price-se{border-top:4px solid #0f8b3d;}
+  .price-label{font-weight:700;color:var(--navy-dark);font-size:.95rem;}
+  .price-sub{font-size:.78rem;color:var(--muted);margin:.3rem 0 .8rem;}
+  .price-val{font-size:2.1rem;font-weight:800;}
+  .price-ee .price-val{color:#b23b3b;}
+  .price-se .price-val{color:#0f8b3d;}
+  .price-note{font-size:.75rem;color:var(--muted);margin-top:.5rem;}
+  .price-vs{font-weight:800;color:var(--navy-dark);font-size:1.1rem;opacity:.5;}
+  .price-disclaimer{text-align:center;font-size:.75rem;color:#8a7757;margin-top:1.2rem;}
 
   /* Architecture / DR band */
   .architecture{background:var(--navy-dark);color:#fff;}
@@ -285,6 +297,23 @@
           <div class="check-mark">Standard Edition pricing</div>
         </div>
       </div>
+      </div>
+      <div class="price-strip">
+        <div class="price-card price-ee">
+          <div class="price-label">Oracle Enterprise Edition</div>
+          <div class="price-sub">16-core server (8 processor licenses)</div>
+          <div class="price-val">$380,000</div>
+          <div class="price-note">one-time license &nbsp;+&nbsp; ~$83,600/yr support (22%)</div>
+        </div>
+        <div class="price-vs">VS</div>
+        <div class="price-card price-se">
+          <div class="price-label">Oracle Standard Edition 2</div>
+          <div class="price-sub">Same server, 2-socket licensing</div>
+          <div class="price-val">$35,000</div>
+          <div class="price-note">one-time license &nbsp;+&nbsp; ~$7,700/yr support (22%)</div>
+        </div>
+      </div>
+      <p class="price-disclaimer">Based on Oracle's published global price list (per-processor and per-socket metrics); actual pricing varies by region, negotiated discounts, and agreement terms. Figures are illustrative, not a quote.</p>
     </div>
   </div>
 </section>
