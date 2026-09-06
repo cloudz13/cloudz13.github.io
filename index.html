@@ -97,6 +97,9 @@
   .price-se .price-val{color:#0f8b3d;}
   .price-note{font-size:.75rem;color:var(--muted);margin-top:.5rem;}
   .price-vs{font-weight:800;color:var(--navy-dark);font-size:1.1rem;opacity:.5;}
+  .price-strip-addon{margin-top:1.2rem;}
+  .price-addon{border-top:4px solid var(--accent);max-width:520px;}
+  .price-addon-val{color:#b8791a;}
   .price-disclaimer{text-align:center;font-size:.75rem;color:#8a7757;margin-top:1.2rem;}
 
   /* Architecture / DR band */
@@ -283,7 +286,7 @@
         </div>
         <div class="compare-row">
           <div>Reporting DB in Sync with Production</div>
-          <div class="cross">Active Data Guard license</div>
+          <div class="cross">Active Data Guard license — costs extra</div>
           <div class="check-mark">Included, on Linux</div>
         </div>
         <div class="compare-row">
@@ -301,19 +304,27 @@
       <div class="price-strip">
         <div class="price-card price-ee">
           <div class="price-label">Oracle Enterprise Edition</div>
-          <div class="price-sub">16-core server (8 processor licenses)</div>
-          <div class="price-val">$380,000</div>
-          <div class="price-note">one-time license &nbsp;+&nbsp; ~$83,600/yr support (22%)</div>
+          <div class="price-sub">16-core server (16 processor licenses)</div>
+          <div class="price-val">$760,000</div>
+          <div class="price-note">base EE license only</div>
         </div>
         <div class="price-vs">VS</div>
         <div class="price-card price-se">
           <div class="price-label">Oracle Standard Edition 2</div>
           <div class="price-sub">Same server, 2-socket licensing</div>
           <div class="price-val">$35,000</div>
-          <div class="price-note">one-time license &nbsp;+&nbsp; ~$7,700/yr support (22%)</div>
+          <div class="price-note">base SE2 license only</div>
         </div>
       </div>
-      <p class="price-disclaimer">Based on Oracle's published global price list (per-processor and per-socket metrics); actual pricing varies by region, negotiated discounts, and agreement terms. Figures are illustrative, not a quote.</p>
+      <div class="price-strip price-strip-addon">
+        <div class="price-card price-addon">
+          <div class="price-label">+ Active Data Guard (for DR & reporting sync)</div>
+          <div class="price-sub">Separate option, licensed per processor — required on EE to get what CloudZ13 already builds on SE2</div>
+          <div class="price-val price-addon-val">+ $368,000</div>
+          <div class="price-note">extra, on top of the base EE license above</div>
+        </div>
+      </div>
+      <p class="price-disclaimer">Based on Oracle's published global price list (per-processor and per-socket metrics); support/maintenance fees are additional and not included above. Actual pricing varies by region, negotiated discounts, and agreement terms. Figures are illustrative, not a quote.</p>
     </div>
   </div>
 </section>
