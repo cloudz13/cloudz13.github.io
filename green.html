@@ -4,10 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#00c853">
-<title>Green</title>
+<title>Dandiya Night Invitation</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #00c853; }
+  html, body { margin: 0; min-height: 100%; background: #00c853; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px; box-sizing: border-box;
+    font-family: Georgia, "Times New Roman", serif; color: #fff; text-align: center;
+  }
+  .card {
+    max-width: 440px; width: 100%; padding: 36px 24px;
+    background: rgba(0, 60, 20, 0.35); border: 3px double #ffd54f; border-radius: 20px;
+  }
+  .small { letter-spacing: 3px; text-transform: uppercase; font-size: 14px; color: #ffd54f; }
+  h1 { font-size: 44px; margin: 12px 0; line-height: 1.1; }
+  .emoji { font-size: 40px; }
+  .date { font-size: 28px; font-weight: bold; margin: 20px 0 4px; color: #ffd54f; }
+  .place { font-size: 20px; }
+  p { margin: 20px 0 0; font-size: 18px; }
 </style>
 </head>
-<body></body>
+<body>
+  <div class="card">
+    <div class="emoji">🪔🥢🪔</div>
+    <div class="small">You are invited to</div>
+    <h1>Dandiya Night</h1>
+    <div class="date">10th October</div>
+    <div class="place">Shipra Sun City</div>
+    <p>Join us for music, dance and festive fun.<br>Come dressed in your best traditional wear!</p>
+  </div>
+</body>
 </html>
