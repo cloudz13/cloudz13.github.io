@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mumbai–Oman DR Scenarios</title>
+<meta name="description" content="Disaster recovery design and failover / switchback scenarios for a Mumbai primary site and an Oman DR site running Oracle Standard Edition with Tomcat.">
+<style>
+  :root{
+    --bg:#f6f8fb; --card:#ffffff; --ink:#0f1c2e; --body:#3d4b5c; --muted:#6b7a8c; --line:#dfe5ec;
+    --panel:#fbfcfe; --panel-line:#cfd8e3;
+    --ok:#15803d; --ok-bg:#e7f6ec;
+    --sb:#1d6fd1; --sb-bg:#e8f1fc;
+    --off:#8794a3; --off-bg:#f1f3f6;
+    --bad:#c62828; --bad-bg:#fdecec;
+    --warn:#b45309; --warn-bg:#fff4e0;
+    --cfg:#7c5cc4;
+    --accent:#0a2540;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d1520; --card:#141e2b; --ink:#e8eef6; --body:#b9c5d3; --muted:#8696a8; --line:#253244;
+      --panel:#111a26; --panel-line:#2c3a4e;
+      --ok:#4ade80; --ok-bg:#12301f;
+      --sb:#6aa8ff; --sb-bg:#14263f;
+      --off:#7d8a99; --off-bg:#1a2330;
+      --bad:#f87171; --bad-bg:#3a1616;
+      --warn:#fbbf24; --warn-bg:#352812;
+      --cfg:#b39dff;
+      --accent:#e8eef6;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1520; --card:#141e2b; --ink:#e8eef6; --body:#b9c5d3; --muted:#8696a8; --line:#253244;
+    --panel:#111a26; --panel-line:#2c3a4e;
+    --ok:#4ade80; --ok-bg:#12301f;
+    --sb:#6aa8ff; --sb-bg:#14263f;
+    --off:#7d8a99; --off-bg:#1a2330;
+    --bad:#f87171; --bad-bg:#3a1616;
+    --warn:#fbbf24; --warn-bg:#352812;
+    --cfg:#b39dff;
+    --accent:#e8eef6;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--bg);color:var(--body);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.6;font-size:15px;}
+  h1,h2,h3{color:var(--ink);line-height:1.25;margin:0;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 16px;}
+  header.top{padding:40px 0 24px;}
+  header.top h1{font-size:30px;letter-spacing:-.02em;}
+  header.top p{max-width:780px;margin:10px 0 0;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:0 0 22px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .grid2 h3{font-size:15px;margin-bottom:6px;}
+  .grid2 ul{margin:0;padding-left:18px;}
+
+  /* lifecycle */
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;}
+  .flow a{text-decoration:none;padding:7px 12px;border-radius:999px;border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:13px;background:var(--panel);}
+  .flow a:hover{border-color:var(--sb);}
+  .flow .arr{color:var(--muted);}
+  .flow a.f-ok{border-color:var(--ok);} .flow a.f-bad{border-color:var(--bad);} .flow a.f-warn{border-color:var(--warn);}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px 20px;font-size:13px;}
+  .legend span{display:inline-flex;align-items:center;gap:7px;}
+  .sw{width:22px;height:14px;border-radius:4px;border:2px solid;display:inline-block;}
+  .sw.active{background:var(--ok-bg);border-color:var(--ok);}
+  .sw.standby{background:var(--sb-bg);border-color:var(--sb);border-style:dashed;}
+  .sw.stopped{background:var(--off-bg);border-color:var(--off);border-style:dashed;}
+  .sw.down{background:var(--bad-bg);border-color:var(--bad);}
+  .sw.rebuild{background:var(--warn-bg);border-color:var(--warn);border-style:dashed;}
+  .ln{width:28px;height:0;border-top:2.5px solid;display:inline-block;}
+  .ln.traffic{border-color:var(--ink);opacity:.55;}
+  .ln.repl{border-color:var(--sb);border-top-style:dashed;}
+  .ln.warn{border-color:var(--warn);border-top-style:dashed;}
+  .ln.bad{border-color:var(--bad);border-top-style:dotted;}
+  .ln.cfg{border-color:var(--cfg);border-top-style:dotted;}
+
+  /* scenario */
+  .toc{display:flex;flex-wrap:wrap;gap:6px;}
+  .toc a{font-size:13px;text-decoration:none;color:var(--body);padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);}
+  .toc a:hover{color:var(--ink);border-color:var(--sb);}
+  .sc{scroll-margin-top:16px;}
+  .sc-head{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;}
+  .num{flex:0 0 auto;width:38px;height:38px;border-radius:10px;background:var(--accent);color:var(--card);display:grid;place-items:center;font-weight:800;}
+  .tag{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
+  .tag.ok{color:var(--ok);} .tag.bad{color:var(--bad);} .tag.warn{color:var(--warn);} .tag.sb{color:var(--sb);}
+  .sc-head h2{font-size:21px;margin:2px 0 4px;}
+  .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+  .fact{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;}
+  .fact b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;}
+  .fact span{color:var(--ink);font-weight:600;font-size:14px;}
+  .diagram{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:16px;}
+  .diagram svg{display:block;width:100%;min-width:760px;height:auto;}
+  .cols{display:grid;grid-template-columns:3fr 2fr;gap:20px;}
+  .cols h3{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;}
+  .cols ol,.cols ul{margin:0;padding-left:20px;}
+  .cols li{margin:3px 0;}
+  footer{padding:10px 0 40px;font-size:13px;color:var(--muted);}
+
+  /* svg */
+  svg text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}
+  .p-box{fill:var(--card);stroke:var(--panel-line);stroke-width:1.5;}
+  .p-name{fill:var(--ink);font-weight:800;font-size:14px;letter-spacing:.04em;}
+  .p-cap{fill:var(--muted);font-size:11.5px;}
+  .pill-t{font-size:11px;font-weight:800;letter-spacing:.06em;}
+  .n-active rect.nb{fill:var(--ok-bg);stroke:var(--ok);}
+  .n-standby rect.nb{fill:var(--sb-bg);stroke:var(--sb);stroke-dasharray:6 4;}
+  .n-stopped rect.nb{fill:var(--off-bg);stroke:var(--off);stroke-dasharray:4 4;}
+  .n-down rect.nb{fill:var(--bad-bg);stroke:var(--bad);}
+  .n-rebuild rect.nb{fill:var(--warn-bg);stroke:var(--warn);stroke-dasharray:6 4;}
+  rect.nb{stroke-width:2;}
+  .nt{fill:var(--ink);font-weight:700;font-size:13px;}
+  .ns{font-size:10.5px;font-weight:600;}
+  .n-active .ns{fill:var(--ok);} .n-standby .ns{fill:var(--sb);} .n-stopped .ns{fill:var(--off);}
+  .n-down .ns{fill:var(--bad);} .n-rebuild .ns{fill:var(--warn);}
+  .x-mark circle{fill:var(--bad);} .x-mark path{stroke:#fff;stroke-width:2.2;stroke-linecap:round;}
+  .l{fill:none;stroke-width:2.2;}
+  .l-traffic{stroke:var(--ink);opacity:.45;}
+  .l-repl{stroke:var(--sb);stroke-dasharray:7 5;animation:flow 1s linear infinite;}
+  .l-warn{stroke:var(--warn);stroke-dasharray:7 5;animation:flow 1s linear infinite;}
+  .l-bad{stroke:var(--bad);stroke-dasharray:2 5;stroke-linecap:round;}
+  .l-cfg{stroke:var(--cfg);stroke-dasharray:2 4;stroke-linecap:round;}
+  .l-dns{stroke:var(--ok);stroke-width:2.6;}
+  @keyframes flow{to{stroke-dashoffset:-12;}}
+  @media (prefers-reduced-motion: reduce){.l-repl,.l-warn{animation:none;}}
+  .m-traffic{fill:var(--ink);opacity:.45;} .m-repl{fill:var(--sb);} .m-warn{fill:var(--warn);}
+  .m-bad{fill:var(--bad);} .m-cfg{fill:var(--cfg);} .m-dns{fill:var(--ok);}
+  .lbl{font-size:10.5px;font-weight:700;paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round;}
+  .lbl-repl{fill:var(--sb);} .lbl-warn{fill:var(--warn);} .lbl-bad{fill:var(--bad);} .lbl-cfg{fill:var(--cfg);} .lbl-traffic{fill:var(--muted);}
+  .dns-box{fill:var(--card);stroke:var(--ok);stroke-width:2;}
+  .dns-t{fill:var(--ink);font-size:12.5px;font-weight:700;}
+  .dns-s{fill:var(--muted);font-size:10.5px;}
+
+  @media (max-width:760px){
+    .grid2,.cols{grid-template-columns:1fr;}
+    .facts{grid-template-columns:1fr 1fr;}
+    header.top h1{font-size:24px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Mumbai → Oman disaster recovery scenarios</h1>
+    <p>Each server group has a load balancer, 3 Tomcat servers, a production DB and a DB replica. Mumbai is the primary site. Oman is the DR site with a copy of every server at 20% capacity. Only the Oman DB is kept in sync (Oracle Standard Edition log shipping). Everything else in Oman is a stopped copy of Mumbai. In every diagram, <b>Mumbai is on the left</b> and <b>Oman is on the right</b>.</p>
+  </header>
+
+  <div class="card">
+    <h3 style="font-size:15px;margin-bottom:6px">DR lifecycle</h3>
+    <div class="flow">
+      <a href="#s0" class="f-ok">0 · Normal</a><span class="arr">→</span>
+      <a href="#s6" class="f-bad">6 · Mumbai disaster: failover</a><span class="arr">→</span>
+      <a href="#s7" class="f-warn">7 · Running on DR</a><span class="arr">→</span>
+      <a href="#s8" class="f-warn">8 · Rebuild Mumbai + reverse sync</a><span class="arr">→</span>
+      <a href="#s9" class="f-ok">9 · Switchback</a><span class="arr">→</span>
+      <a href="#s0" class="f-ok">0 · Normal</a>
+    </div>
+    <p style="margin-top:12px;font-size:13.5px">Local failures inside Mumbai (scenarios 1–3) are handled in Mumbai and never touch DNS. Scenarios 4–5 cover failures of the link or the DR site while Mumbai keeps running.</p>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:15px;margin-bottom:10px">Legend</h3>
+    <div class="legend">
+      <span><i class="sw active"></i>Active / serving</span>
+      <span><i class="sw standby"></i>Standby, in sync</span>
+      <span><i class="sw stopped"></i>Built copy, stopped</span>
+      <span><i class="sw down"></i>Failed / unavailable</span>
+      <span><i class="sw rebuild"></i>Rebuilding / catching up</span>
+      <span><i class="ln traffic"></i>User / app traffic</span>
+      <span><i class="ln repl"></i>DB replication</span>
+      <span><i class="ln warn"></i>Re-sync / reverse sync</span>
+      <span><i class="ln bad"></i>Broken link</span>
+      <span><i class="ln cfg"></i>App &amp; config copy</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:15px;margin-bottom:10px">Scenarios</h3>
+    <nav class="toc" id="toc"></nav>
+  </div>
+
+  <main id="scenarios"></main>
+
+  <div class="card">
+    <h2 style="font-size:20px;margin-bottom:12px">Design points to settle</h2>
+    <div class="grid2">
+      <div>
+        <h3>Architecture</h3>
+        <ul>
+          <li><b>Server count.</b> The listed roles are 6 per site (LB, 3 Tomcat, DB, DB replica). Confirm what the 7th server is, for example a web/proxy tier, a jump host or a monitoring/backup server.</li>
+          <li><b>Single load balancer.</b> One LB per site is a single point of failure. A failed Mumbai LB forces a full DR failover. An LB pair (or a cloud LB) avoids this.</li>
+          <li><b>DNS TTL.</b> Keep the record TTL low (60–300 s) so the switch to Oman takes effect quickly. Clients and resolvers that cache longer will lag behind.</li>
+          <li><b>App DB connection.</b> Each site's Tomcats should point to a local DB alias (DNS name or VIP). The same build then works at both sites, and a local DB switch only moves the alias.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Data &amp; operations</h3>
+        <ul>
+          <li><b>RPO.</b> SE2 log shipping is asynchronous. A disaster loses whatever redo has not reached Oman yet. Ship logs often enough to meet the RPO target and alert on lag.</li>
+          <li><b>Split-brain.</b> Before opening the Oman DB, fence Mumbai: power it off or block it so it can never come back as a second primary.</li>
+          <li><b>20% capacity.</b> Decide in advance which features to disable on DR (reports, batch jobs, exports) and how to scale Oman up if the outage runs long.</li>
+          <li><b>Drills.</b> Rehearse failover and switchback at least twice a year, using runbooks with named owners and a timed checklist.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>Diagrams are generated from the scenario data in this page's script.</footer>
+</div>
+
+<script>
+// ---- geometry ---------------------------------------------------------------
+const N = {
+  mLB:{x:245,y:150,w:150,h:50,t:'Load Balancer'},
+  mT1:{x:105,y:245,w:120,h:48,t:'Tomcat 1'}, mT2:{x:245,y:245,w:120,h:48,t:'Tomcat 2'}, mT3:{x:385,y:245,w:120,h:48,t:'Tomcat 3'},
+  mRep:{x:130,y:350,w:170,h:56,t:'DB Replica'}, mDB:{x:360,y:350,w:170,h:56,t:'DB Server'},
+  oLB:{x:755,y:150,w:150,h:50,t:'Load Balancer'},
+  oT1:{x:615,y:245,w:120,h:48,t:'Tomcat 1'}, oT2:{x:755,y:245,w:120,h:48,t:'Tomcat 2'}, oT3:{x:895,y:245,w:120,h:48,t:'Tomcat 3'},
+  oDB:{x:640,y:350,w:170,h:56,t:'DB Server'}, oRep:{x:870,y:350,w:170,h:56,t:'DB Replica'}
+};
+const UNDER_Y = 404;
+
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+function node(id, st){
+  const n = N[id], [state, sub] = st;
+  const x = n.x - n.w/2, y = n.y - n.h/2;
+  let s = `<g class="n-${state}"><rect class="nb" x="${x}" y="${y}" width="${n.w}" height="${n.h}" rx="10"/>`;
+  s += `<text class="nt" x="${n.x}" y="${n.y-4}" text-anchor="middle">${esc(n.t)}</text>`;
+  s += `<text class="ns" x="${n.x}" y="${n.y+13}" text-anchor="middle">${esc(sub)}</text>`;
+  if (state === 'down') {
+    const cx = x + n.w - 2, cy = y + 2;
+    s += `<g class="x-mark"><circle cx="${cx}" cy="${cy}" r="9"/><path d="M${cx-4} ${cy-4}L${cx+4} ${cy+4}M${cx+4} ${cy-4}L${cx-4} ${cy+4}"/></g>`;
+  }
+  return s + '</g>';
+}
+
+function link(l){
+  const a = N[l.from], b = N[l.to], type = l.type;
+  let d, lx, ly, below = false, horiz = false;
+  if (l.route === 'under') {
+    const y1 = a.y + a.h/2, y2 = b.y + b.h/2 + 3;
+    d = `M${a.x} ${y1} V${UNDER_Y} H${b.x} V${y2}`;
+    lx = (a.x + b.x)/2; ly = UNDER_Y + 15; below = true;
+  } else if (Math.abs(a.y - b.y) < 5) {
+    const dir = b.x > a.x ? 1 : -1;
+    const x1 = a.x + dir*a.w/2, x2 = b.x - dir*(b.w/2 + 3);
+    d = `M${x1} ${a.y} H${x2}`;
+    lx = (x1 + x2)/2; ly = a.y - 9; horiz = true;
+  } else {
+    const dn = b.y > a.y ? 1 : -1;
+    const x1 = a.x, y1 = a.y + dn*a.h/2, x2 = b.x, y2 = b.y - dn*(b.h/2 + 3);
+    d = `M${x1} ${y1} L${x2} ${y2}`;
+    lx = (x1 + x2)/2; ly = (y1 + y2)/2;
+  }
+  const arrow = type === 'traffic' ? '' : ` marker-end="url(#m-${type})"`;
+  let s = `<path class="l l-${type}" d="${d}"${arrow}/>`;
+  if (type === 'bad') {
+    s += `<g class="x-mark"><circle cx="${lx}" cy="${horiz ? a.y : (below ? UNDER_Y : ly)}" r="8"/><path d="M${lx-3.5} ${(horiz?a.y:(below?UNDER_Y:ly))-3.5}l7 7m0 -7l-7 7"/></g>`;
+  }
+  if (l.label) {
+    const lines = [].concat(l.label);
+    s += `<text class="lbl lbl-${type}" x="${lx}" y="${ly}" text-anchor="middle">${esc(lines[0])}</text>`;
+    if (lines[1]) s += `<text class="lbl lbl-${type}" x="${lx}" y="${horiz ? a.y + 19 : ly + 13}" text-anchor="middle">${esc(lines[1])}</text>`;
+  }
+  return s;
+}
+
+function panel(x, name, cap, status){
+  const tone = {ACTIVE:'ok', STANDBY:'sb', DOWN:'bad', REBUILDING:'warn', CUTOVER:'warn'}[status] || 'sb';
+  const pw = status.length*7.6 + 20, px = x + 434 - pw;
+  return `<rect class="p-box" x="${x}" y="76" width="450" height="352" rx="14"/>
+    <text class="p-name" x="${x+16}" y="100">${esc(name)}</text>
+    <text class="p-cap" x="${x+16}" y="117">${esc(cap)}</text>
+    <rect x="${px}" y="86" width="${pw}" height="22" rx="11" style="fill:var(--${tone}-bg);stroke:var(--${tone});stroke-width:1.5"/>
+    <text class="pill-t" x="${px+pw/2}" y="101" text-anchor="middle" style="fill:var(--${tone})">${status}</text>`;
+}
+
+function dns(target, text){
+  let s = `<rect class="dns-box" x="350" y="10" width="300" height="46" rx="10"/>
+    <text class="dns-t" x="500" y="30" text-anchor="middle">DNS · app.company.com</text>
+    <text class="dns-s" x="500" y="46" text-anchor="middle">${esc(text)}</text>`;
+  if (target === 'm') s += `<path class="l l-dns" d="M350 33 H245 V122" marker-end="url(#m-dns)"/>`;
+  if (target === 'o') s += `<path class="l l-dns" d="M650 33 H755 V122" marker-end="url(#m-dns)"/>`;
+  return s;
+}
+
+const MARKERS = ['traffic','repl','warn','bad','cfg','dns'].map(t =>
+  `<marker id="m-${t}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m-${t}" d="M0 0L10 5L0 10z"/></marker>`).join('');
+
+function svg(sc){
+  const st = Object.assign({}, BASE_NODES, sc.nodes || {});
+  ['m','o'].forEach(p => { if (st[p+'T']) ['1','2','3'].forEach(i => { if (!(sc.nodes && sc.nodes[p+'T'+i])) st[p+'T'+i] = st[p+'T']; }); });
+  let s = `<svg viewBox="0 0 1000 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(sc.title)}: Mumbai on the left, Oman on the right"><defs>${MARKERS}</defs>`;
+  s += panel(20, 'MUMBAI · PRIMARY SITE', '100% capacity', sc.site.m);
+  s += panel(530, 'OMAN · DR SITE', '20% capacity', sc.site.o);
+  s += dns(sc.dns, sc.dnsText);
+  s += (sc.links || []).map(link).join('');
+  s += Object.keys(N).map(id => node(id, st[id])).join('');
+  return s + '</svg>';
+}
+
+// ---- scenario data -------------------------------------------------------------
+const BASE_NODES = {
+  mLB:['active','Serving traffic'], mT:['active','Running'],
+  mDB:['active','PRIMARY · read-write'], mRep:['standby','Local standby · in sync'],
+  oLB:['stopped','Copy · stopped'], oT:['stopped','Copy · stopped'],
+  oDB:['standby','DR standby · in sync'], oRep:['stopped','Copy · stopped']
+};
+const web = (p, db, skip=[]) => {
+  const out = [];
+  ['1','2','3'].forEach(i => {
+    if (skip.includes(i)) return;
+    out.push({from:p+'LB', to:p+'T'+i, type:'traffic'});
+    out.push({from:p+'T'+i, to:db, type:'traffic'});
+  });
+  return out;
+};
+const CFG = {from:'mT3', to:'oT1', type:'cfg', label:'app & config copy'};
+
+const SCENARIOS = [
+{
+  title:'Normal operation', tag:'Steady state', tone:'ok',
+  lead:'All users go to Mumbai. Mumbai DB ships logs to the local replica and to the Oman DR DB. Every other Oman server is a built copy that stays stopped.',
+  facts:{Users:'Mumbai', 'Data protection':'Local + DR', Capacity:'100%', 'DNS change':'No'},
+  site:{m:'ACTIVE', o:'STANDBY'}, dns:'m', dnsText:'→ Mumbai load balancer',
+  links:[...web('m','mDB'),
+    {from:'mDB', to:'mRep', type:'repl', label:'log apply'},
+    {from:'mDB', to:'oDB', type:'repl', label:['log shipping','async']}, CFG],
+  steps:[
+    'DNS resolves app.company.com to the Mumbai load balancer.',
+    'The LB spreads requests across the 3 Tomcat servers, which use the Mumbai DB.',
+    'Mumbai DB redo/archive logs are applied to the local DB replica (fast local protection).',
+    'The same logs are shipped to Oman and applied to the DR DB, keeping it in sync.',
+    'Every app release and config change is also copied to the Oman LB and Tomcats, which stay stopped.'
+  ],
+  notes:[
+    'Monitor apply lag on both standbys and alert when it exceeds the RPO target.',
+    'Take RMAN backups in Mumbai and keep a copy off-site or in Oman.',
+    'Oman app servers must always match the Mumbai release version.'
+  ]
+},
+{
+  title:'One Tomcat server fails in Mumbai', tag:'Local app failure', tone:'warn',
+  lead:'The load balancer health check removes the failed Tomcat. Users stay on Mumbai, so DR is not involved.',
+  facts:{Users:'Mumbai', 'Data protection':'Local + DR', Capacity:'~67%', 'DNS change':'No'},
+  site:{m:'ACTIVE', o:'STANDBY'}, dns:'m', dnsText:'→ Mumbai load balancer (unchanged)',
+  nodes:{mT2:['down','Crashed']},
+  links:[...web('m','mDB',['2']),
+    {from:'mDB', to:'mRep', type:'repl', label:'log apply'},
+    {from:'mDB', to:'oDB', type:'repl', label:['log shipping','async']}, CFG],
+  steps:[
+    'The LB health check marks Tomcat 2 as down and stops sending it traffic.',
+    'Tomcat 1 and 3 carry the load. Sessions on Tomcat 2 are lost unless sessions are shared or sticky with failover.',
+    'Repair or rebuild Tomcat 2 from the standard build, then put it back in the LB pool.'
+  ],
+  notes:[
+    'If 2 of 3 Tomcats fail, capacity may fall below Oman\'s 20%. Repairing locally is still usually faster than a site failover.',
+    'If the single Mumbai LB fails, users cannot reach the app at all. Unless it can be fixed within the RTO, treat it as a site disaster (scenario 6).'
+  ]
+},
+{
+  title:'Mumbai DB server fails: local DB switch', tag:'Local DB failover', tone:'warn',
+  lead:'Only the database moves. The Mumbai replica becomes primary, the Tomcats repoint to it, and Oman now receives logs from the new primary. The app stays in Mumbai and DNS is unchanged.',
+  facts:{Users:'Mumbai', 'Data protection':'DR only', Capacity:'100%', 'DNS change':'No'},
+  site:{m:'ACTIVE', o:'STANDBY'}, dns:'m', dnsText:'→ Mumbai load balancer (unchanged)',
+  nodes:{mDB:['down','Failed'], mRep:['active','PROMOTED · PRIMARY']},
+  links:[...web('m','mRep'),
+    {from:'mDB', to:'mRep', type:'bad'},
+    {from:'mRep', to:'oDB', type:'repl', route:'under', label:'log shipping now from the replica'}, CFG],
+  steps:[
+    'Confirm the primary DB is truly down and fence it (stop the instance or power it off).',
+    'Apply any remaining logs on the Mumbai replica, then activate it and open it read-write.',
+    'Move the local DB alias (DNS name or VIP) to the replica. Tomcats reconnect, or restart them.',
+    'Repoint log shipping so the new primary feeds the Oman DR DB.',
+    'Users see a short interruption. DNS and Oman servers are unchanged.'
+  ],
+  notes:[
+    'Mumbai has no local standby until the failed server is rebuilt (scenario 3).',
+    'Oman must be repointed to the new primary. If not, the DR DB silently falls behind.',
+    'The steps match a site failover but are limited to Mumbai infrastructure.'
+  ]
+},
+{
+  title:'Failed Mumbai DB server is repaired', tag:'Local recovery', tone:'sb',
+  lead:'The repaired server is rebuilt as the new local standby. The roles stay swapped. Switching back is optional and planned.',
+  facts:{Users:'Mumbai', 'Data protection':'Local + DR', Capacity:'100%', 'DNS change':'No'},
+  site:{m:'ACTIVE', o:'STANDBY'}, dns:'m', dnsText:'→ Mumbai load balancer (unchanged)',
+  nodes:{mDB:['rebuild','New standby · syncing'], mRep:['active','PRIMARY · read-write']},
+  links:[...web('m','mRep'),
+    {from:'mRep', to:'mDB', type:'warn', label:'re-sync'},
+    {from:'mRep', to:'oDB', type:'repl', route:'under', label:'log shipping from current primary'}, CFG],
+  steps:[
+    'Rebuild the old DB server as a standby from a fresh backup or copy of the current primary. Do not reuse its old datafiles.',
+    'Start log apply from the current primary until it catches up.',
+    'Option A: keep the roles as they are, so the replica server stays primary.',
+    'Option B: in a maintenance window, do a planned switch back to the original server (same steps as scenario 2, with zero data loss).'
+  ],
+  notes:[
+    'Keep monitoring, backup jobs and runbooks in line with whichever server is currently primary.'
+  ]
+},
+{
+  title:'Mumbai–Oman network link fails', tag:'Replication link failure', tone:'warn',
+  lead:'Production is unaffected, but the Oman DR DB stops receiving logs, so a disaster during this window would lose more data.',
+  facts:{Users:'Mumbai', 'Data protection':'Local only', Capacity:'100%', 'DNS change':'No'},
+  site:{m:'ACTIVE', o:'STANDBY'}, dns:'m', dnsText:'→ Mumbai load balancer (unchanged)',
+  nodes:{oDB:['rebuild','Lagging · RPO growing']},
+  links:[...web('m','mDB'),
+    {from:'mDB', to:'mRep', type:'repl', label:'log apply'},
+    {from:'mDB', to:'oDB', type:'bad', label:['link down','']},
+    {from:'mT3', to:'oT1', type:'bad', label:'config copy paused'}],
+  steps:[
+    'Lag alert fires. Archive logs queue up in Mumbai.',
+    'Make sure Mumbai has enough archive-log space for the outage, and do not delete logs Oman has not received.',
+    'When the link returns, the queued logs ship automatically and Oman catches up.',
+    'If the gap is too large or logs were lost, re-seed the Oman DB from a fresh backup.'
+  ],
+  notes:[
+    'This is not a disaster. Do not fail over.',
+    'Report the reduced DR protection to stakeholders until lag is back to normal.'
+  ]
+},
+{
+  title:'Oman DR site fails', tag:'DR site failure', tone:'warn',
+  lead:'Mumbai keeps serving users, but there is no DR protection until Oman is restored.',
+  facts:{Users:'Mumbai', 'Data protection':'Local only', Capacity:'100%', 'DNS change':'No'},
+  site:{m:'ACTIVE', o:'DOWN'}, dns:'m', dnsText:'→ Mumbai load balancer (unchanged)',
+  nodes:{oLB:['down','Unavailable'], oT:['down','Unavailable'], oDB:['down','Unavailable'], oRep:['down','Unavailable']},
+  links:[...web('m','mDB'),
+    {from:'mDB', to:'mRep', type:'repl', label:'log apply'},
+    {from:'mDB', to:'oDB', type:'bad', label:['DR offline','']}],
+  steps:[
+    'No user impact. Keep archive logs in Mumbai until Oman is back.',
+    'Restore the Oman servers. Rebuild the DR DB from a Mumbai backup if its data is lost or too old.',
+    'Resume log shipping and wait until the DR DB is in sync.',
+    'Re-copy the current app build and config to the Oman LB and Tomcats.'
+  ],
+  notes:[
+    'The Mumbai local replica is the only protection. Treat this as high priority.'
+  ]
+},
+{
+  title:'Mumbai disaster: fail over to Oman', tag:'Site failover', tone:'bad',
+  lead:'The whole Mumbai site is lost. The Oman DB is activated, the Oman app tier is started, and DNS moves to the Oman load balancer.',
+  facts:{Users:'Oman', 'Data protection':'None (yet)', Capacity:'20%', 'DNS change':'Yes → Oman'},
+  site:{m:'DOWN', o:'ACTIVE'}, dns:'o', dnsText:'→ Oman load balancer (switched)',
+  nodes:{mLB:['down','Site down'], mT:['down','Site down'], mDB:['down','Site down'], mRep:['down','Site down'],
+         oLB:['active','Started'], oT:['active','Started'], oDB:['active','ACTIVATED · read-write'], oRep:['stopped','Copy · stopped']},
+  links:[...web('o','oDB'),
+    {from:'mDB', to:'oDB', type:'bad', label:['no more logs','']}],
+  steps:[
+    'Declare the disaster. A named person decides, following the runbook.',
+    'Fence Mumbai: make sure the Mumbai DB cannot come back as a second primary.',
+    'Apply every log already received in Oman, and record the last applied time or SCN (this is your actual data loss).',
+    'Activate the Oman DB and open it read-write.',
+    'Start the Oman Tomcats and LB. They already use the local DB alias.',
+    'Smoke-test the application through the Oman LB.',
+    'Change the DNS record to the Oman LB, then announce the switch and the limited capacity.'
+  ],
+  notes:[
+    'RPO is the redo not yet shipped at the moment of the disaster. RTO is the time from decision to DNS switch.',
+    'Once the Oman DB is opened read-write, the old Mumbai DB is out of date and must never be reopened as primary.',
+    'Users with cached DNS reach Oman only after the TTL expires.'
+  ]
+},
+{
+  title:'Running on DR in Oman', tag:'Operating on DR', tone:'warn',
+  lead:'Oman serves all users at 20% capacity. The Oman replica is started as a local standby, so Oman has its own protection while Mumbai is down.',
+  facts:{Users:'Oman', 'Data protection':'Local (Oman)', Capacity:'20%', 'DNS change':'Stays on Oman'},
+  site:{m:'DOWN', o:'ACTIVE'}, dns:'o', dnsText:'→ Oman load balancer',
+  nodes:{mLB:['down','Site down'], mT:['down','Site down'], mDB:['down','Site down'], mRep:['down','Site down'],
+         oLB:['active','Serving traffic'], oT:['active','Running'], oDB:['active','PRIMARY · read-write'], oRep:['rebuild','Local standby · syncing']},
+  links:[...web('o','oDB'),
+    {from:'oDB', to:'oRep', type:'warn', label:'log apply'}],
+  steps:[
+    'Build the Oman DB replica as a local standby of the Oman primary.',
+    'Run with reduced load. Pause reports, heavy batch jobs and non-critical features.',
+    'If the outage runs long, scale up the Oman servers (CPU and RAM) or add Tomcats.',
+    'Start RMAN backups of the Oman DB and keep archive logs. They are needed for the reverse sync.'
+  ],
+  notes:[
+    'All changes, including app releases and config, are now made in Oman. Mumbai rebuilds from Oman.',
+    'Keep a log of changes made during the DR period.'
+  ]
+},
+{
+  title:'Mumbai restored: rebuild and reverse sync', tag:'Rebuild + reverse sync', tone:'warn',
+  lead:'Mumbai infrastructure comes back. The app tier and config are recreated from Oman, and the Mumbai DB is rebuilt as a standby fed by Oman. Users stay on Oman.',
+  facts:{Users:'Oman', 'Data protection':'Local + Mumbai', Capacity:'20%', 'DNS change':'No'},
+  site:{m:'REBUILDING', o:'ACTIVE'}, dns:'o', dnsText:'→ Oman load balancer (unchanged)',
+  nodes:{mLB:['rebuild','Recreated · stopped'], mT:['rebuild','Recreated · stopped'], mDB:['rebuild','Standby · reverse sync'], mRep:['stopped','Recreated · stopped'],
+         oLB:['active','Serving traffic'], oT:['active','Running'], oDB:['active','PRIMARY · read-write'], oRep:['standby','Local standby · in sync']},
+  links:[...web('o','oDB'),
+    {from:'oDB', to:'oRep', type:'repl', label:'log apply'},
+    {from:'oDB', to:'mDB', type:'warn', label:['reverse sync','Oman → Mumbai']},
+    {from:'oT1', to:'mT3', type:'cfg', label:'app & config copy'}],
+  steps:[
+    'Rebuild or repair the Mumbai servers. Do not open the old Mumbai DB.',
+    'Recreate the Mumbai LB and Tomcats with the current app release and config from Oman. Keep them stopped.',
+    'Rebuild the Mumbai DB as a standby from a fresh Oman backup.',
+    'Start reverse log shipping from Oman to Mumbai and let it catch up.',
+    'Rebuild the Mumbai replica after switchback (scenario 9), or now as a second-level copy.'
+  ],
+  notes:[
+    'Reverse sync can take hours for a large DB. Plan the cutover window only after lag stays near zero.',
+    'Test the Mumbai app tier against a snapshot or a read-only open where possible, without touching production.'
+  ]
+},
+{
+  title:'Planned switchback to Mumbai', tag:'Cutover', tone:'ok',
+  lead:'In a maintenance window, Oman is stopped, the final logs are applied in Mumbai, and Mumbai becomes primary again. DNS moves back, Oman returns to DR standby, and the setup returns to scenario 0.',
+  facts:{Users:'Mumbai', 'Data protection':'DR (local rebuilding)', Capacity:'100%', 'DNS change':'Yes → Mumbai'},
+  site:{m:'ACTIVE', o:'STANDBY'}, dns:'m', dnsText:'→ Mumbai load balancer (switched back)',
+  nodes:{mLB:['active','Serving traffic'], mT:['active','Running'], mDB:['active','PRIMARY · read-write'], mRep:['rebuild','Standby · syncing'],
+         oLB:['stopped','Stopped after cutover'], oT:['stopped','Stopped after cutover'], oDB:['standby','DR standby · in sync'], oRep:['stopped','Copy · stopped']},
+  links:[...web('m','mDB'),
+    {from:'mDB', to:'mRep', type:'warn', label:'re-sync'},
+    {from:'mDB', to:'oDB', type:'repl', label:['log shipping','normal direction']}, CFG],
+  steps:[
+    'Announce the window. Optionally point DNS to a maintenance page.',
+    'Stop the Oman Tomcats and LB so no more writes reach the Oman DB.',
+    'Switch logs on the Oman DB, ship the final logs, and confirm Mumbai has applied everything (zero lag, matching SCN).',
+    'Open the Mumbai DB read-write as primary.',
+    'Rebuild the Oman DB as a standby of Mumbai and restart normal log shipping from Mumbai to Oman.',
+    'Start the Mumbai Tomcats and LB, then smoke-test.',
+    'Change DNS back to the Mumbai LB.',
+    'Rebuild the Mumbai replica as the local standby. The setup is back to scenario 0.'
+  ],
+  notes:[
+    'This is planned and should lose no data: the final logs are shipped and checked before the switch.',
+    'Keep the Oman DB untouched until Mumbai is verified, so it remains the fallback.',
+    'Re-enable the Mumbai-to-Oman app and config copy job.'
+  ]
+}
+];
+
+// ---- render -------------------------------------------------------------------
+const toc = document.getElementById('toc'), main = document.getElementById('scenarios');
+SCENARIOS.forEach((sc, i) => {
+  toc.insertAdjacentHTML('beforeend', `<a href="#s${i}">${i} · ${esc(sc.title)}</a>`);
+  const facts = Object.entries(sc.facts).map(([k,v]) => `<div class="fact"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('');
+  main.insertAdjacentHTML('beforeend', `
+  <section class="card sc" id="s${i}">
+    <div class="sc-head"><div class="num">${i}</div><div>
+      <div class="tag ${sc.tone}">${esc(sc.tag)}</div><h2>${esc(sc.title)}</h2><p>${esc(sc.lead)}</p>
+    </div></div>
+    <div class="facts">${facts}</div>
+    <div class="diagram">${svg(sc)}</div>
+    <div class="cols">
+      <div><h3>What happens</h3><ol>${sc.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
+      <div><h3>Watch out</h3><ul>${sc.notes.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>
+    </div>
+  </section>`);
+});
+</script>
+</body>
+</html>
