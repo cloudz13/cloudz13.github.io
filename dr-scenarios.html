@@ -147,40 +147,6 @@
     <p>Each server group has a load balancer, 3 Tomcat servers, a production DB and a DB replica. Mumbai is the primary site. Oman is the DR site with a copy of every server at 20% capacity. Only the Oman DB is kept in sync (Oracle Standard Edition log shipping). Everything else in Oman is a stopped copy of Mumbai. In every diagram, <b>Mumbai is on the left</b> and <b>Oman is on the right</b>.</p>
   </header>
 
-  <div class="card">
-    <h3 style="font-size:15px;margin-bottom:6px">DR lifecycle</h3>
-    <div class="flow">
-      <a href="#s0" class="f-ok">0 · Normal</a><span class="arr">→</span>
-      <a href="#s6" class="f-bad">6 · Mumbai disaster: failover</a><span class="arr">→</span>
-      <a href="#s7" class="f-warn">7 · Running on DR</a><span class="arr">→</span>
-      <a href="#s8" class="f-warn">8 · Rebuild Mumbai + reverse sync</a><span class="arr">→</span>
-      <a href="#s9" class="f-ok">9 · Switchback</a><span class="arr">→</span>
-      <a href="#s0" class="f-ok">0 · Normal</a>
-    </div>
-    <p style="margin-top:12px;font-size:13.5px">Local failures inside Mumbai (scenarios 1–3) are handled in Mumbai and never touch DNS. Scenarios 4–5 cover failures of the link or the DR site while Mumbai keeps running.</p>
-  </div>
-
-  <div class="card">
-    <h3 style="font-size:15px;margin-bottom:10px">Legend</h3>
-    <div class="legend">
-      <span><i class="sw active"></i>Active / serving</span>
-      <span><i class="sw standby"></i>Standby, in sync</span>
-      <span><i class="sw stopped"></i>Built copy, stopped</span>
-      <span><i class="sw down"></i>Failed / unavailable</span>
-      <span><i class="sw rebuild"></i>Rebuilding / catching up</span>
-      <span><i class="ln traffic"></i>User / app traffic</span>
-      <span><i class="ln repl"></i>DB replication</span>
-      <span><i class="ln warn"></i>Re-sync / reverse sync</span>
-      <span><i class="ln bad"></i>Broken link</span>
-      <span><i class="ln cfg"></i>App &amp; config copy</span>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3 style="font-size:15px;margin-bottom:10px">Scenarios</h3>
-    <nav class="toc" id="toc"></nav>
-  </div>
-
   <main id="scenarios"></main>
 
   <div class="card">
@@ -538,9 +504,8 @@ const SCENARIOS = [
 ];
 
 // ---- render -------------------------------------------------------------------
-const toc = document.getElementById('toc'), main = document.getElementById('scenarios');
+const main = document.getElementById('scenarios');
 SCENARIOS.forEach((sc, i) => {
-  toc.insertAdjacentHTML('beforeend', `<a href="#s${i}">${i} · ${esc(sc.title)}</a>`);
   const facts = Object.entries(sc.facts).map(([k,v]) => `<div class="fact"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('');
   main.insertAdjacentHTML('beforeend', `
   <section class="card sc" id="s${i}">
