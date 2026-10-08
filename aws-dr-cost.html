@@ -170,12 +170,7 @@
         <rect class="s-box" x="420" y="20" width="564" height="262" rx="14"/>
         <text class="s-name" x="436" y="46">PASSIVE DR · AWS MUMBAI (ap-south-1)</text>
         <text class="s-cap" x="436" y="62">VPC · billed per hour / per GB-month</text>
-        <g class="n-idle"><rect x="612" y="78" width="180" height="48" rx="10"/><text class="nt" x="702" y="98" text-anchor="middle">Application LB</text><text class="ns" x="702" y="114" text-anchor="middle">Idle · hourly charge</text></g>
-        <g class="n-off"><rect x="480" y="150" width="190" height="52" rx="10"/><text class="nt" x="575" y="172" text-anchor="middle">Tomcat 1 (EC2)</text><text class="ns" x="575" y="189" text-anchor="middle">Stopped · disk charge only</text></g>
-        <g class="n-off"><rect x="734" y="150" width="190" height="52" rx="10"/><text class="nt" x="829" y="172" text-anchor="middle">Tomcat 2 (EC2)</text><text class="ns" x="829" y="189" text-anchor="middle">Stopped · disk charge only</text></g>
-        <g class="n-on"><rect x="560" y="218" width="290" height="50" rx="10"/><text class="nt" x="705" y="239" text-anchor="middle">Oracle DB standby (EC2 + 1 TB gp3)</text><text class="ns" x="705" y="256" text-anchor="middle">Running 24×7 · applying logs</text></g>
-        <path class="ln ln-dim" d="M660 126 L590 150 M744 126 L814 150"/>
-        <path class="ln ln-repl" d="M256 214 C380 214, 420 243, 556 243" marker-end="url(#ar)"/>
+        <g id="dyn"></g>
         <text class="lbl" x="368" y="206" text-anchor="middle" style="fill:var(--sb)">Site-to-Site VPN</text>
         <text class="lbl" x="368" y="250" text-anchor="middle" style="fill:var(--sb)">inbound data free</text>
       </svg>
@@ -475,6 +470,70 @@ function compute(s){
   return {rows, passive, active};
 }
 
+// ---- diagram: AWS side follows the calculator inputs ----------------------------------------
+const AX = 440, AW = 524;                 // usable width inside the AWS panel
+function row(n, maxW){                     // evenly spaced boxes across the panel
+  const gap = 12, w = Math.min(maxW, (AW - (n - 1) * gap) / n);
+  const start = AX + (AW - (n * w + (n - 1) * gap)) / 2;
+  return Array.from({length:n}, (_, i) => ({x: start + i * (w + gap), w}));
+}
+function box(cls, x, y, w, h, title, sub){
+  const cx = x + w / 2;
+  return `<g class="${cls}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10"/>
+    <text class="nt" x="${cx}" y="${y + h/2 - 3}" text-anchor="middle">${esc(title)}</text>
+    <text class="ns" x="${cx}" y="${y + h/2 + 13}" text-anchor="middle">${esc(sub)}</text></g>`;
+}
+function drawDiagram(s){
+  const nT = Math.round(s.tCount), nD = Math.round(s.dbCount);
+  const MAX = 6;
+  let g = '';
+
+  // load balancer
+  const lbOn = s.alb === 'always';
+  g += box(lbOn ? 'n-idle' : 'n-off', 612, 76, 180, 48, 'Application LB', lbOn ? 'Idle · hourly charge' : 'Created at failover');
+
+  // tomcat row
+  const tY = 146, tH = 52;
+  const tSub = s.tDisk === 'snap' ? 'Stopped · snapshot only' : 'Stopped · gp3 disk';
+  if (nT === 0) {
+    g += `<text class="s-cap" x="702" y="${tY + 30}" text-anchor="middle">No Tomcat servers</text>`;
+  } else if (nT > MAX) {
+    g += `<path class="ln ln-dim" d="M702 124 V${tY}"/>`;
+    g += box('n-off', 572, tY, 260, tH, `Tomcat × ${nT} (${s.tType})`, tSub);
+  } else {
+    row(nT, 190).forEach((b, i) => {
+      const wide = b.w >= 150, mid = b.w >= 105;
+      g += `<path class="ln ln-dim" d="M702 124 L${b.x + b.w/2} ${tY}"/>`;
+      g += box('n-off', b.x, tY, b.w, tH, wide ? `Tomcat ${i+1} (${s.tType})` : `Tomcat ${i+1}`, wide ? tSub : (mid ? 'Stopped' : 'Off'));
+    });
+  }
+
+  // db row
+  const dY = 216, dH = 52;
+  const dSub = `${s.dbType} · ${s.dbGB} GB · 24×7`;
+  let target = null;
+  if (nD === 0) {
+    g += `<text class="s-cap" x="702" y="${dY + 30}" text-anchor="middle">No DB server</text>`;
+  } else if (nD > MAX) {
+    g += box('n-on', 552, dY, 300, dH, `Oracle DB standby × ${nD}`, dSub);
+    target = {x:552, y:dY + dH/2};
+  } else {
+    row(nD, 300).forEach((b, i) => {
+      const wide = b.w >= 230, mid = b.w >= 140;
+      const title = nD === 1 ? 'Oracle DB standby' : (mid ? `DB standby ${i+1}` : `DB ${i+1}`);
+      g += box('n-on', b.x, dY, b.w, dH, title, wide ? dSub : (mid ? s.dbType : 'Running'));
+      if (i === 0) target = {x:b.x, y:dY + dH/2};
+    });
+  }
+
+  // replication from on-prem primary
+  if (target) g += `<path class="ln ln-repl" d="M256 214 C360 214, ${target.x - 90} ${target.y}, ${target.x - 4} ${target.y}" marker-end="url(#ar)"/>`;
+
+  $('dyn').innerHTML = g;
+  $('dyn').closest('svg').setAttribute('aria-label',
+    `On-premises Mumbai primary replicating over VPN to AWS Mumbai passive DR: load balancer ${lbOn ? 'idle' : 'created at failover'}, ${nT} Tomcat server${nT === 1 ? '' : 's'} stopped, ${nD} DB server${nD === 1 ? '' : 's'} running`);
+}
+
 // ---- render -------------------------------------------------------------------------------------------
 const STATE_TAG = {on:'<span class="tag t-on">Running</span>', off:'<span class="tag t-off">Stopped</span>', idle:'<span class="tag t-dr">Idle</span>'};
 function render(){
@@ -506,6 +565,7 @@ function render(){
   $('breakdown').innerHTML = r.rows.map(x => `<tr><td><b>${esc(x.item)}</b></td><td>${STATE_TAG[x.state]}</td><td style="color:var(--muted);font-size:13px">${esc(x.how)}</td>
     <td class="r num">${usd(x.passive)}</td><td class="barcell"><div class="bar" style="width:${(x.passive/max*100).toFixed(1)}%"></div></td><td class="r num">${usd(x.active)}</td></tr>`).join('')
     + `<tr><td colspan="3"><b>Total</b></td><td class="r num"><b>${usd(r.passive)}</b></td><td></td><td class="r num"><b>${usd(r.active)}</b></td></tr>`;
+  drawDiagram(s);
   store('awsdr-form', s);
   return {s, r};
 }
