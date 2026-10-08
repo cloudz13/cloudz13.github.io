@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS Passive DR Cost</title>
+<meta name="description" content="Cost calculator for a passive (pilot-light) disaster recovery setup in AWS Mumbai (ap-south-1): load balancer, Tomcat servers and an always-on Oracle DB standby.">
+<style>
+  :root{
+    --bg:#f6f8fb; --card:#ffffff; --ink:#0f1c2e; --body:#3d4b5c; --muted:#6b7a8c; --line:#dfe5ec;
+    --panel:#fbfcfe; --panel-line:#cfd8e3; --input:#ffffff;
+    --ok:#15803d; --ok-bg:#e7f6ec;
+    --sb:#1d6fd1; --sb-bg:#e8f1fc;
+    --off:#8794a3; --off-bg:#f1f3f6;
+    --warn:#b45309; --warn-bg:#fff4e0;
+    --bad:#c62828;
+    --accent:#0a2540; --accent-ink:#ffffff;
+    --bar:#1d6fd1;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d1520; --card:#141e2b; --ink:#e8eef6; --body:#b9c5d3; --muted:#8696a8; --line:#253244;
+      --panel:#111a26; --panel-line:#2c3a4e; --input:#0f1823;
+      --ok:#4ade80; --ok-bg:#12301f;
+      --sb:#6aa8ff; --sb-bg:#14263f;
+      --off:#7d8a99; --off-bg:#1a2330;
+      --warn:#fbbf24; --warn-bg:#352812;
+      --bad:#f87171;
+      --accent:#e8eef6; --accent-ink:#0d1520;
+      --bar:#6aa8ff;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1520; --card:#141e2b; --ink:#e8eef6; --body:#b9c5d3; --muted:#8696a8; --line:#253244;
+    --panel:#111a26; --panel-line:#2c3a4e; --input:#0f1823;
+    --ok:#4ade80; --ok-bg:#12301f;
+    --sb:#6aa8ff; --sb-bg:#14263f;
+    --off:#7d8a99; --off-bg:#1a2330;
+    --warn:#fbbf24; --warn-bg:#352812;
+    --bad:#f87171;
+    --accent:#e8eef6; --accent-ink:#0d1520;
+    --bar:#6aa8ff;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--body);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.55;font-size:15px;}
+  h1,h2,h3{color:var(--ink);line-height:1.25;margin:0;}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 16px;}
+  header.top{padding:40px 0 22px;}
+  header.top h1{font-size:30px;letter-spacing:-.02em;}
+  .by{margin-top:6px;font-size:14px;color:var(--muted);}
+  .by b{color:var(--ink);}
+  header.top p.intro{max-width:800px;margin:12px 0 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:0 0 22px;}
+  .card > h2{font-size:20px;margin-bottom:6px;}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 16px;}
+  .num{font-variant-numeric:tabular-nums;}
+
+  /* overview */
+  .diagram{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:16px;}
+  .diagram svg{display:block;width:100%;min-width:720px;height:auto;}
+  .tri{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .tri div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel);}
+  .tri h3{font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+  .tri p{margin:0;font-size:13.5px;}
+
+  /* calculator */
+  .presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .presets button{font:inherit;font-size:13px;font-weight:600;padding:8px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;}
+  .presets button:hover{border-color:var(--sb);}
+  .presets button.on{border-color:var(--sb);background:var(--sb-bg);color:var(--sb);}
+  .calc{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start;}
+  .groups{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  fieldset{border:1px solid var(--line);border-radius:12px;padding:12px 14px 14px;margin:0;background:var(--panel);min-width:0;}
+  legend{font-weight:700;color:var(--ink);font-size:14px;padding:0 6px;}
+  .f{display:flex;flex-direction:column;gap:3px;margin-top:10px;}
+  .f label{font-size:12.5px;font-weight:600;color:var(--body);}
+  .f small{font-size:11.5px;color:var(--muted);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  input,select{font:inherit;font-size:14px;padding:7px 9px;border-radius:8px;border:1px solid var(--panel-line);background:var(--input);color:var(--ink);width:100%;min-width:0;}
+  input:focus,select:focus{outline:2px solid var(--sb);outline-offset:0;border-color:var(--sb);}
+  .seg{display:flex;border:1px solid var(--panel-line);border-radius:8px;overflow:hidden;}
+  .seg label{flex:1;text-align:center;font-size:12.5px;font-weight:600;padding:7px 4px;cursor:pointer;color:var(--body);background:var(--input);border-left:1px solid var(--panel-line);}
+  .seg label:first-child{border-left:0;}
+  .seg input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;}
+  .seg label:has(input:checked){background:var(--sb-bg);color:var(--sb);}
+  .seg label:has(input:focus-visible){outline:2px solid var(--sb);outline-offset:-2px;}
+  .hide{display:none !important;}
+
+  .res{position:sticky;top:14px;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:18px;}
+  .res h3{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);}
+  .big{font-size:34px;font-weight:800;color:var(--ink);letter-spacing:-.02em;margin:2px 0 0;}
+  .big small{font-size:14px;font-weight:600;color:var(--muted);}
+  .kv{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:14px;margin-top:10px;}
+  .kv span:nth-child(even){text-align:right;font-weight:700;color:var(--ink);}
+  .act{margin-top:14px;padding:12px;border-radius:10px;background:var(--warn-bg);border:1px solid var(--warn);}
+  .act h3{color:var(--warn);}
+  .act .v{font-size:20px;font-weight:800;color:var(--ink);}
+  .act p{margin:2px 0 0;font-size:12.5px;}
+  .cmp{margin-top:10px;font-size:13.5px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);}
+  .save{display:flex;gap:8px;margin-top:14px;}
+  .save button{font:inherit;font-weight:700;font-size:13.5px;padding:8px 12px;border-radius:8px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer;white-space:nowrap;}
+
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;}
+  td.r,th.r{text-align:right;}
+  .tbl{overflow-x:auto;}
+  .barcell{width:34%;}
+  .bar{height:10px;border-radius:5px;background:var(--bar);min-width:2px;}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;}
+  .t-on{background:var(--ok-bg);color:var(--ok);} .t-off{background:var(--off-bg);color:var(--off);} .t-dr{background:var(--warn-bg);color:var(--warn);}
+  .xbtn{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--panel);color:var(--body);border-radius:6px;padding:2px 8px;cursor:pointer;}
+  .empty{color:var(--muted);font-size:14px;}
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .notes h3{font-size:15px;margin-bottom:6px;}
+  .notes ul{margin:0;padding-left:18px;}
+  .notes li{margin:4px 0;}
+  footer{padding:6px 0 40px;font-size:12.5px;color:var(--muted);}
+
+  svg text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}
+  .s-box{fill:var(--card);stroke:var(--panel-line);stroke-width:1.5;}
+  .s-name{fill:var(--ink);font-weight:800;font-size:13px;letter-spacing:.04em;}
+  .s-cap{fill:var(--muted);font-size:11px;}
+  .n-on rect{fill:var(--ok-bg);stroke:var(--ok);stroke-width:2;}
+  .n-off rect{fill:var(--off-bg);stroke:var(--off);stroke-width:2;stroke-dasharray:4 4;}
+  .n-idle rect{fill:var(--sb-bg);stroke:var(--sb);stroke-width:2;stroke-dasharray:6 4;}
+  .nt{fill:var(--ink);font-weight:700;font-size:12.5px;}
+  .ns{font-size:10.5px;font-weight:600;}
+  .n-on .ns{fill:var(--ok);} .n-off .ns{fill:var(--off);} .n-idle .ns{fill:var(--sb);}
+  .ln{fill:none;stroke-width:2.2;}
+  .ln-repl{stroke:var(--sb);stroke-dasharray:7 5;animation:flow 1s linear infinite;}
+  .ln-dim{stroke:var(--off);stroke-dasharray:3 4;}
+  .lbl{font-size:10.5px;font-weight:700;paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round;}
+  @keyframes flow{to{stroke-dashoffset:-12;}}
+  @media (prefers-reduced-motion: reduce){.ln-repl{animation:none;}}
+
+  @media (max-width:980px){
+    .calc{grid-template-columns:1fr;}
+    .res{position:static;}
+  }
+  @media (max-width:720px){
+    .groups,.tri,.notes{grid-template-columns:1fr;}
+    header.top h1{font-size:24px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Passive DR in AWS Mumbai: cost calculator</h1>
+    <div class="by">Prepared by <b>CloudZ13</b> (DB services) · <a href="dr-scenarios.html" style="color:var(--sb);font-weight:600">← DR scenarios</a></div>
+    <p class="intro">This page estimates the monthly cost of a passive ("pilot light") DR site in <b>AWS Asia Pacific (Mumbai), ap-south-1</b>. The site would replace the Oman DR site. Only the Oracle DB server runs all the time to receive changes. The two Tomcat servers stay stopped, and the load balancer sits idle until a failover. Prices are AWS list prices in USD.</p>
+  </header>
+
+  <!-- Overview -->
+  <section class="card">
+    <h2>What runs, and what you pay for</h2>
+    <p class="sub">In passive mode AWS charges for the running DB server, all disks (EBS volumes), the idle load balancer and the VPN link. Stopped servers have no compute charge.</p>
+    <div class="diagram">
+      <svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="On-premises Mumbai primary replicating over VPN to AWS Mumbai passive DR: load balancer idle, two Tomcat servers stopped, DB server running">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--sb)"/></marker></defs>
+        <rect class="s-box" x="16" y="20" width="300" height="262" rx="14"/>
+        <text class="s-name" x="32" y="46">PRIMARY · ON-PREMISES</text>
+        <text class="s-cap" x="32" y="62">Current Mumbai data centre (production)</text>
+        <g class="n-on"><rect x="76" y="88" width="180" height="48" rx="10"/><text class="nt" x="166" y="108" text-anchor="middle">LB + 3 Tomcat</text><text class="ns" x="166" y="124" text-anchor="middle">Serving users</text></g>
+        <g class="n-on"><rect x="76" y="186" width="180" height="56" rx="10"/><text class="nt" x="166" y="210" text-anchor="middle">Oracle DB (primary)</text><text class="ns" x="166" y="227" text-anchor="middle">Ships logs to AWS</text></g>
+        <path class="ln" d="M166 136 V186" style="stroke:var(--ink);opacity:.4"/>
+
+        <rect class="s-box" x="420" y="20" width="564" height="262" rx="14"/>
+        <text class="s-name" x="436" y="46">PASSIVE DR · AWS MUMBAI (ap-south-1)</text>
+        <text class="s-cap" x="436" y="62">VPC · billed per hour / per GB-month</text>
+        <g class="n-idle"><rect x="612" y="78" width="180" height="48" rx="10"/><text class="nt" x="702" y="98" text-anchor="middle">Application LB</text><text class="ns" x="702" y="114" text-anchor="middle">Idle · hourly charge</text></g>
+        <g class="n-off"><rect x="480" y="150" width="190" height="52" rx="10"/><text class="nt" x="575" y="172" text-anchor="middle">Tomcat 1 (EC2)</text><text class="ns" x="575" y="189" text-anchor="middle">Stopped · disk charge only</text></g>
+        <g class="n-off"><rect x="734" y="150" width="190" height="52" rx="10"/><text class="nt" x="829" y="172" text-anchor="middle">Tomcat 2 (EC2)</text><text class="ns" x="829" y="189" text-anchor="middle">Stopped · disk charge only</text></g>
+        <g class="n-on"><rect x="560" y="218" width="290" height="50" rx="10"/><text class="nt" x="705" y="239" text-anchor="middle">Oracle DB standby (EC2 + 1 TB gp3)</text><text class="ns" x="705" y="256" text-anchor="middle">Running 24×7 · applying logs</text></g>
+        <path class="ln ln-dim" d="M660 126 L590 150 M744 126 L814 150"/>
+        <path class="ln ln-repl" d="M256 214 C380 214, 420 243, 556 243" marker-end="url(#ar)"/>
+        <text class="lbl" x="368" y="206" text-anchor="middle" style="fill:var(--sb)">Site-to-Site VPN</text>
+        <text class="lbl" x="368" y="250" text-anchor="middle" style="fill:var(--sb)">inbound data free</text>
+      </svg>
+    </div>
+    <div class="tri">
+      <div><h3><i class="dot" style="background:var(--ok)"></i>Always on</h3><p>DB server (EC2 compute), DB disk, VPN connection, public IPs, backups in S3.</p></div>
+      <div><h3><i class="dot" style="background:var(--off)"></i>Stopped</h3><p>Tomcat servers: no compute charge, but their disks (or snapshots) are billed every month.</p></div>
+      <div><h3><i class="dot" style="background:var(--warn)"></i>Only on failover</h3><p>Tomcat compute, load balancer traffic (LCUs) and data sent out to users.</p></div>
+    </div>
+  </section>
+
+  <!-- Calculator -->
+  <section class="card" id="calculator">
+    <h2>Calculator</h2>
+    <p class="sub">Start from a preset, then change any value. Totals update as you type. Use <b>Save scenario</b> to compare options side by side.</p>
+    <div class="presets" id="presets"></div>
+
+    <div class="calc">
+      <form class="groups" id="form" onsubmit="return false">
+        <fieldset>
+          <legend>DB server (always running)</legend>
+          <div class="f"><label for="dbType">Instance type</label><select id="dbType"></select><small id="dbInfo"></small></div>
+          <div class="f"><label>Pricing</label>
+            <div class="seg"><label><input type="radio" name="dbPrice" value="od" checked>On-Demand</label><label><input type="radio" name="dbPrice" value="ri">1-yr Reserved</label></div>
+            <small>1-yr Reserved = Standard RI, no upfront, 12-month commitment.</small></div>
+          <div class="row2">
+            <div class="f"><label for="dbGB">DB disk (GB, gp3)</label><input id="dbGB" type="number" min="0" step="1"></div>
+            <div class="f"><label for="dbCount">DB servers</label><input id="dbCount" type="number" min="0" step="1"></div>
+          </div>
+          <div class="row2">
+            <div class="f"><label for="dbIops">gp3 IOPS</label><input id="dbIops" type="number" min="3000" step="100"><small>3,000 included</small></div>
+            <div class="f"><label for="dbTp">gp3 MB/s</label><input id="dbTp" type="number" min="125" step="5"><small>125 included</small></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Tomcat servers (stopped)</legend>
+          <div class="row2">
+            <div class="f"><label for="tCount">Servers</label><input id="tCount" type="number" min="0" step="1"></div>
+            <div class="f"><label for="tGB">Disk per server (GB)</label><input id="tGB" type="number" min="0" step="1"></div>
+          </div>
+          <div class="f"><label for="tType">Instance type (billed only when started)</label><select id="tType"></select></div>
+          <div class="f"><label>Keep app disks as</label>
+            <div class="seg"><label><input type="radio" name="tDisk" value="ebs" checked>Live gp3 volume</label><label><input type="radio" name="tDisk" value="snap">Snapshot only</label></div>
+            <small id="tDiskHelp"></small></div>
+          <div class="f" id="tUsedWrap"><label for="tUsed">Used data per server (GB)</label><input id="tUsed" type="number" min="0" step="1"><small>Snapshots bill only the data actually written.</small></div>
+          <div class="f"><label for="tDrill">Test / drill hours per month</label><input id="tDrill" type="number" min="0" step="1"><small>Hours the Tomcats are started for DR tests.</small></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Load balancer &amp; network</legend>
+          <div class="f"><label>Application Load Balancer</label>
+            <div class="seg"><label><input type="radio" name="alb" value="always" checked>Keep it provisioned</label><label><input type="radio" name="alb" value="failover">Create on failover</label></div>
+            <small>Creating it on failover saves the hourly fee but adds a step (and DNS work) to the runbook.</small></div>
+          <div class="row2">
+            <div class="f"><label for="vpn">Site-to-Site VPNs</label><input id="vpn" type="number" min="0" step="1"></div>
+            <div class="f"><label for="ips">Public IPv4 addresses</label><input id="ips" type="number" min="0" step="1"></div>
+          </div>
+          <div class="f"><label for="dto">Data out to internet / on-prem (GB / month)</label><input id="dto" type="number" min="0" step="1"><small>Data into AWS (log shipping) is free.</small></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Backups, other &amp; currency</legend>
+          <div class="row2">
+            <div class="f"><label for="bkGB">Backups in S3 (GB)</label><input id="bkGB" type="number" min="0" step="1"></div>
+            <div class="f"><label for="bkClass">S3 class</label>
+              <select id="bkClass"><option value="std">Standard</option><option value="ia">Standard-IA</option><option value="gir">Glacier Instant</option></select></div>
+          </div>
+          <div class="row2">
+            <div class="f"><label for="other">Other AWS $/month</label><input id="other" type="number" min="0" step="1"><small>CloudWatch, Route 53, KMS, etc.</small></div>
+            <div class="f"><label for="lic">Oracle licence $/month</label><input id="lic" type="number" min="0" step="1"><small>BYOL: 0 if already covered.</small></div>
+          </div>
+          <div class="row2">
+            <div class="f"><label for="fx">USD → INR rate</label><input id="fx" type="number" min="0" step="0.01"><small>Enter today's rate.</small></div>
+            <div class="f"><label for="oman">Current Oman DR ₹/month</label><input id="oman" type="number" min="0" step="1"><small>Optional, for comparison.</small></div>
+          </div>
+        </fieldset>
+
+        <fieldset style="grid-column:1/-1">
+          <legend>If you fail over (DR becomes active)</legend>
+          <div class="row2">
+            <div class="f"><label for="aLcu">Average load balancer LCUs</label><input id="aLcu" type="number" min="0" step="0.5"><small>~1 LCU ≈ 25 new connections/s or 1 GB/hour processed.</small></div>
+            <div class="f"><label for="aDto">Data out to users (GB / month)</label><input id="aDto" type="number" min="0" step="1"></div>
+          </div>
+        </fieldset>
+      </form>
+
+      <aside class="res" aria-live="polite">
+        <h3>Passive DR · per month</h3>
+        <div class="big num" id="rMonth">$0</div>
+        <div class="kv">
+          <span>Per year</span><span class="num" id="rYear"></span>
+          <span>Per month in INR</span><span class="num" id="rInr"></span>
+          <span>Per year in INR</span><span class="num" id="rInrYear"></span>
+        </div>
+        <div class="cmp hide" id="rOman"></div>
+        <div class="act">
+          <h3>While running on DR</h3>
+          <div class="v num" id="rActive"></div>
+          <p id="rActiveDay"></p>
+        </div>
+        <div class="save">
+          <input id="scName" type="text" placeholder="Scenario name" aria-label="Scenario name">
+          <button type="button" id="saveBtn">Save scenario</button>
+        </div>
+      </aside>
+    </div>
+
+    <h3 style="font-size:16px;margin:24px 0 8px">Monthly breakdown</h3>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Item</th><th>State</th><th>How it is billed</th><th class="r">Passive $/mo</th><th class="barcell"></th><th class="r">On DR $/mo</th></tr></thead>
+        <tbody id="breakdown"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Saved scenarios</h2>
+    <p class="sub">Saved in this browser only.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Scenario</th><th>DB server</th><th>Tomcat disks</th><th>LB</th><th class="r">Passive $/mo</th><th class="r">Passive $/yr</th><th class="r">₹/mo</th><th class="r">On DR $/mo</th><th></th></tr></thead>
+      <tbody id="saved"></tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <h2>AWS prices used (ap-south-1, Linux, USD)</h2>
+    <p class="sub">From the AWS Price List API (publication 2026-10-07, EC2 prices effective 2026-10-01). Prices exclude GST/taxes.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Instance</th><th>vCPU</th><th>RAM</th><th class="r">On-Demand $/hr</th><th class="r">1-yr RI $/hr</th><th class="r">On-Demand $/mo</th><th>Oracle SE2 sockets*</th><th>Fit</th></tr></thead>
+      <tbody id="priceTbl"></tbody>
+    </table></div>
+    <div class="tbl" style="margin-top:16px"><table>
+      <thead><tr><th>Other item</th><th class="r">Price</th></tr></thead>
+      <tbody id="otherTbl"></tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <h2>Notes and assumptions</h2>
+    <div class="notes">
+      <div>
+        <h3>Sizing</h3>
+        <ul>
+          <li><b>"4 core, 32 GB".</b> On AWS, 4 vCPU (e.g. r6i.xlarge) is 2 physical cores with hyper-threading. For 4 physical cores and 32 GB, use an 8 vCPU type such as m6i.2xlarge or m6a.2xlarge. Both are in the list.</li>
+          <li><b>Tomcat disk.</b> The default is 2 TB total (1 TB on each of 2 servers). Change "Disk per server" if you meant 2 TB each.</li>
+          <li><b>Tomcat disks are the biggest lever.</b> A 1 TB gp3 volume costs about $91/month even when the server is stopped. Keeping only snapshots costs $0.05 per GB actually used. The trade-off is an extra restore step (a few minutes) at failover.</li>
+          <li>A month is 730 hours. EBS gp3 includes 3,000 IOPS and 125 MB/s at no extra cost.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Not included / check separately</h3>
+        <ul>
+          <li><b>Oracle licence.</b> *Under Oracle's cloud licensing policy, SE2 on AWS counts an instance with up to 4 vCPU as 1 socket, and each further 4 vCPU as another socket (SE2 is capped at 8 vCPU). A standby that is kept in sync usually needs to be licensed too. Confirm with your Oracle contract.</li>
+          <li>GST (18%) on AWS invoices in India, AWS Support plan, and Direct Connect (if you use it instead of VPN).</li>
+          <li>Data transfer is billed per GB at $0.1093 for the first 10 TB. The 100 GB/month AWS free tier is ignored.</li>
+          <li>"While running on DR" assumes the Tomcats run 24×7 on-demand, the load balancer carries traffic, and snapshots are restored to gp3 volumes.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>Estimates only. AWS prices change. Re-check in the AWS Pricing Calculator before you commit.</footer>
+</div>
+
+<script>
+// ---- AWS ap-south-1 list prices (USD) -----------------------------------------------
+const EC2 = {
+  'r6i.xlarge': {v:4, m:32, od:0.2600, ri:0.17089, role:'db'},
+  'r7i.xlarge': {v:4, m:32, od:0.2730, ri:0.17943, role:'db'},
+  'r6a.xlarge': {v:4, m:32, od:0.1430, ri:0.09398, role:'db'},
+  'r5.xlarge':  {v:4, m:32, od:0.2600, ri:0.16300, role:'db'},
+  'm6i.2xlarge':{v:8, m:32, od:0.4040, ri:0.26681, role:'db'},
+  'm7i.2xlarge':{v:8, m:32, od:0.4242, ri:0.28015, role:'db'},
+  'm6a.2xlarge':{v:8, m:32, od:0.2222, ri:0.14674, role:'db'},
+  'r6i.2xlarge':{v:8, m:64, od:0.5200, ri:0.34177, role:'db'},
+  'r7i.2xlarge':{v:8, m:64, od:0.5460, ri:0.35886, role:'db'},
+  't3.large':   {v:2, m:8,  od:0.0896, ri:0.05640, role:'app'},
+  'm6i.large':  {v:2, m:8,  od:0.1010, ri:0.06670, role:'app'},
+  'm7i.large':  {v:2, m:8,  od:0.10605,ri:0.07004, role:'app'},
+  'c6i.xlarge': {v:4, m:8,  od:0.1700, ri:0.11256, role:'app'},
+  't3.xlarge':  {v:4, m:16, od:0.1792, ri:0.11290, role:'app'},
+  'm6i.xlarge': {v:4, m:16, od:0.2020, ri:0.13340, role:'app'},
+  'm7i.xlarge': {v:4, m:16, od:0.2121, ri:0.14007, role:'app'}
+};
+const P = {
+  hours: 730,
+  gp3GB: 0.0912, gp3Iops: 0.0057, gp3Tp: 0.0456, snapGB: 0.05,
+  albHr: 0.0239, lcuHr: 0.008,
+  vpnHr: 0.05, ipHr: 0.005,
+  s3: {std:0.025, ia:0.0138, gir:0.005},
+  dto: [[10240,0.1093],[40960,0.085],[102400,0.082],[Infinity,0.080]]
+};
+
+const PRESETS = [
+  {id:'spec', name:'Your spec · On-Demand', v:{dbType:'r6i.xlarge', dbPrice:'od', dbCount:1, dbGB:1024, dbIops:3000, dbTp:125, tCount:2, tGB:1024, tType:'m6i.xlarge', tDisk:'ebs', tUsed:200, tDrill:0, alb:'always', vpn:1, ips:2, dto:20, bkGB:1024, bkClass:'ia', other:10, lic:0, aLcu:2, aDto:500}},
+  {id:'ri', name:'Your spec · 1-yr Reserved DB', v:{dbPrice:'ri'}},
+  {id:'lean', name:'Lean: snapshots + LB on failover', v:{dbPrice:'ri', tDisk:'snap', tUsed:200, alb:'failover', ips:1}},
+  {id:'amd', name:'Cheapest 32 GB (AMD r6a)', v:{dbType:'r6a.xlarge', dbPrice:'ri', tDisk:'snap', tUsed:200}},
+  {id:'phys4', name:'4 physical cores (m6i.2xlarge)', v:{dbType:'m6i.2xlarge'}},
+  {id:'drill', name:'With monthly DR drill (8 h)', v:{tDrill:8}}
+];
+
+// ---- helpers ------------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+const usd = (n, d=2) => '$' + n.toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const num = id => { const x = parseFloat($(id).value); return isFinite(x) && x > 0 ? x : 0; };
+const radio = name => (document.querySelector(`input[name="${name}"]:checked`) || {}).value;
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const sockets = v => v <= 4 ? 1 : Math.ceil(v / 4);
+function dtoCost(gb){
+  let left = gb, prev = 0, cost = 0;
+  for (const [upTo, rate] of P.dto) { const band = Math.min(left, upTo - prev); if (band <= 0) break; cost += band * rate; left -= band; prev = upTo; }
+  return cost;
+}
+
+// ---- build selects + price tables -----------------------------------------------------------------
+function fillSelect(sel, role){
+  sel.innerHTML = Object.entries(EC2).filter(([,e]) => e.role === role)
+    .map(([k,e]) => `<option value="${k}">${k} · ${e.v} vCPU · ${e.m} GB · $${e.od.toFixed(4)}/hr</option>`).join('');
+}
+fillSelect($('dbType'), 'db'); fillSelect($('tType'), 'app');
+
+$('priceTbl').innerHTML = Object.entries(EC2).map(([k,e]) => `<tr><td><b>${k}</b></td><td>${e.v}</td><td>${e.m} GB</td>
+  <td class="r num">${e.od.toFixed(4)}</td><td class="r num">${e.ri.toFixed(4)}</td><td class="r num">${usd(e.od*P.hours)}</td>
+  <td>${e.role === 'db' ? sockets(e.v) : '–'}</td><td>${e.role === 'db' ? 'DB' : 'Tomcat'}</td></tr>`).join('');
+$('otherTbl').innerHTML = [
+  ['EBS gp3 storage', '$0.0912 per GB-month'],
+  ['EBS gp3 extra IOPS (above 3,000)', '$0.0057 per IOPS-month'],
+  ['EBS gp3 extra throughput (above 125 MB/s)', '$0.0456 per MB/s-month'],
+  ['EBS snapshot storage', '$0.05 per GB-month'],
+  ['Application Load Balancer', '$0.0239 per hour + $0.008 per LCU-hour'],
+  ['Site-to-Site VPN connection', '$0.05 per hour'],
+  ['Public IPv4 address (in use or idle)', '$0.005 per hour'],
+  ['S3 Standard / Standard-IA / Glacier Instant Retrieval', '$0.025 / $0.0138 / $0.005 per GB-month'],
+  ['Data transfer in', 'Free'],
+  ['Data transfer out to internet', '$0.1093 per GB (first 10 TB), then $0.085']
+].map(([a,b]) => `<tr><td>${a}</td><td class="r">${b}</td></tr>`).join('');
+
+// ---- state <-> form -------------------------------------------------------------------------------
+const FIELDS = ['dbType','dbCount','dbGB','dbIops','dbTp','tCount','tGB','tType','tUsed','tDrill','vpn','ips','dto','bkGB','bkClass','other','lic','fx','oman','aLcu','aDto'];
+const RADIOS = ['dbPrice','tDisk','alb'];
+function setForm(v){
+  FIELDS.forEach(f => { if (v[f] !== undefined) $(f).value = v[f]; });
+  RADIOS.forEach(r => { if (v[r] !== undefined) { const el = document.querySelector(`input[name="${r}"][value="${v[r]}"]`); if (el) el.checked = true; } });
+}
+function readForm(){
+  const s = {};
+  FIELDS.forEach(f => s[f] = ['dbType','tType','bkClass'].includes(f) ? $(f).value : num(f));
+  RADIOS.forEach(r => s[r] = radio(r));
+  return s;
+}
+
+// ---- cost model --------------------------------------------------------------------------------------
+function compute(s){
+  const H = P.hours, db = EC2[s.dbType], t = EC2[s.tType];
+  const dbRate = s.dbPrice === 'ri' ? db.ri : db.od;
+  const ebsOf = gb => gb * P.gp3GB;
+  const rows = [];
+  const add = (item, state, how, passive, active) => rows.push({item, state, how, passive, active});
+
+  const dbC = s.dbCount * dbRate * H;
+  add(`DB server · ${s.dbType}`, 'on', `${s.dbCount} × $${dbRate.toFixed(4)}/hr × ${H} h (${s.dbPrice === 'ri' ? '1-yr RI' : 'On-Demand'})`, dbC, dbC);
+
+  const dbDisk = s.dbCount * (ebsOf(s.dbGB) + Math.max(0, s.dbIops - 3000) * P.gp3Iops + Math.max(0, s.dbTp - 125) * P.gp3Tp);
+  add('DB disk · gp3', 'on', `${s.dbCount} × ${s.dbGB} GB` + (s.dbIops > 3000 ? `, ${s.dbIops} IOPS` : '') + (s.dbTp > 125 ? `, ${s.dbTp} MB/s` : ''), dbDisk, dbDisk);
+
+  const tDrill = s.tCount * t.od * s.tDrill;
+  const tFull = s.tCount * t.od * H;
+  add(`Tomcat servers · ${s.tType}`, 'off', s.tDrill ? `${s.tCount} × $${t.od.toFixed(4)}/hr × ${s.tDrill} drill h` : 'Stopped: no compute charge', tDrill, tFull);
+
+  const tDiskP = s.tDisk === 'snap' ? s.tCount * s.tUsed * P.snapGB : s.tCount * ebsOf(s.tGB);
+  const tDiskA = s.tCount * ebsOf(s.tGB) + (s.tDisk === 'snap' ? s.tCount * s.tUsed * P.snapGB : 0);
+  add('Tomcat disks', 'off', s.tDisk === 'snap' ? `Snapshots: ${s.tCount} × ${s.tUsed} GB used × $0.05` : `${s.tCount} × ${s.tGB} GB gp3 × $0.0912`, tDiskP, tDiskA);
+
+  const albP = s.alb === 'always' ? P.albHr * H : 0;
+  const albA = P.albHr * H + s.aLcu * P.lcuHr * H;
+  add('Application Load Balancer', s.alb === 'always' ? 'idle' : 'off', s.alb === 'always' ? `$0.0239/hr × ${H} h (idle, ~0 LCU)` : 'Created only at failover', albP, albA);
+
+  const vpnC = s.vpn * P.vpnHr * H;
+  add('Site-to-Site VPN', 'on', `${s.vpn} × $0.05/hr × ${H} h`, vpnC, vpnC);
+
+  const ipC = s.ips * P.ipHr * H;
+  add('Public IPv4 addresses', 'on', `${s.ips} × $0.005/hr × ${H} h`, ipC, ipC);
+
+  const s3C = s.bkGB * P.s3[s.bkClass];
+  add('Backups in S3', 'on', `${s.bkGB} GB × $${P.s3[s.bkClass]}`, s3C, s3C);
+
+  add('Data transfer out', 'on', `${s.dto} GB passive / ${s.aDto} GB on DR`, dtoCost(s.dto), dtoCost(s.aDto));
+  add('Other AWS services', 'on', 'Your estimate', s.other, s.other);
+  if (s.lic) add('Oracle licence', 'on', 'Your estimate', s.lic, s.lic);
+
+  const passive = rows.reduce((a, r) => a + r.passive, 0);
+  const active = rows.reduce((a, r) => a + r.active, 0);
+  return {rows, passive, active};
+}
+
+// ---- render -------------------------------------------------------------------------------------------
+const STATE_TAG = {on:'<span class="tag t-on">Running</span>', off:'<span class="tag t-off">Stopped</span>', idle:'<span class="tag t-dr">Idle</span>'};
+function render(){
+  const s = readForm(), r = compute(s), fx = s.fx;
+  const db = EC2[s.dbType];
+  $('dbInfo').textContent = `${db.v} vCPU (${db.v/2} physical cores) · ${db.m} GB · Oracle SE2: ${sockets(db.v)} socket${sockets(db.v) > 1 ? 's' : ''}`;
+  $('tDiskHelp').textContent = s.tDisk === 'snap'
+    ? 'Volumes are deleted after snapshotting. At failover, restore them from the snapshots (adds a few minutes).'
+    : 'Volumes stay attached to the stopped servers, ready to start immediately.';
+  $('tUsedWrap').classList.toggle('hide', s.tDisk !== 'snap');
+
+  $('rMonth').innerHTML = `${usd(r.passive)} <small>/ month</small>`;
+  $('rYear').textContent = usd(r.passive * 12, 0);
+  $('rInr').textContent = fx ? inr(r.passive * fx) : '–';
+  $('rInrYear').textContent = fx ? inr(r.passive * fx * 12) : '–';
+  $('rActive').textContent = `${usd(r.active)} / month`;
+  $('rActiveDay').textContent = `≈ ${usd(r.active / 30.4)} per day while failed over` + (fx ? ` (${inr(r.active / 30.4 * fx)})` : '');
+
+  const oman = s.oman;
+  if (oman && fx) {
+    const awsInr = r.passive * fx, diff = oman - awsInr;
+    $('rOman').classList.remove('hide');
+    $('rOman').innerHTML = diff >= 0
+      ? `AWS passive DR is <b style="color:var(--ok)">${inr(diff)}/month cheaper</b> than Oman (${inr(diff*12)}/year).`
+      : `AWS passive DR is <b style="color:var(--bad)">${inr(-diff)}/month more</b> than Oman (${inr(-diff*12)}/year).`;
+  } else $('rOman').classList.add('hide');
+
+  const max = Math.max(...r.rows.map(x => x.passive), 1);
+  $('breakdown').innerHTML = r.rows.map(x => `<tr><td><b>${esc(x.item)}</b></td><td>${STATE_TAG[x.state]}</td><td style="color:var(--muted);font-size:13px">${esc(x.how)}</td>
+    <td class="r num">${usd(x.passive)}</td><td class="barcell"><div class="bar" style="width:${(x.passive/max*100).toFixed(1)}%"></div></td><td class="r num">${usd(x.active)}</td></tr>`).join('')
+    + `<tr><td colspan="3"><b>Total</b></td><td class="r num"><b>${usd(r.passive)}</b></td><td></td><td class="r num"><b>${usd(r.active)}</b></td></tr>`;
+  store('awsdr-form', s);
+  return {s, r};
+}
+
+// ---- presets ---------------------------------------------------------------------------------------------
+function applyPreset(p){
+  setForm(PRESETS[0].v); setForm(p.v);
+  document.querySelectorAll('#presets button').forEach(b => b.classList.toggle('on', b.dataset.id === p.id));
+  $('scName').value = p.name;
+  render();
+}
+$('presets').innerHTML = PRESETS.map(p => `<button type="button" data-id="${p.id}">${esc(p.name)}</button>`).join('');
+$('presets').addEventListener('click', e => { const b = e.target.closest('button'); if (b) applyPreset(PRESETS.find(p => p.id === b.dataset.id)); });
+$('form').addEventListener('input', () => { document.querySelectorAll('#presets button').forEach(b => b.classList.remove('on')); render(); });
+
+// ---- saved scenarios -----------------------------------------------------------------------------------
+function load(k, d){ try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch(e){ return d; } }
+function store(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+let saved = load('awsdr-saved', []);
+function renderSaved(){
+  if (!saved.length) { $('saved').innerHTML = '<tr><td colspan="9" class="empty">No saved scenarios yet. Pick a preset or set values, then click Save scenario.</td></tr>'; return; }
+  $('saved').innerHTML = saved.map((x, i) => {
+    const r = compute(x.s), fx = x.s.fx;
+    return `<tr><td><b>${esc(x.name)}</b></td><td>${x.s.dbType} · ${x.s.dbPrice === 'ri' ? '1-yr RI' : 'On-Demand'}</td>
+      <td>${x.s.tDisk === 'snap' ? 'Snapshots' : 'gp3 ' + x.s.tCount + '×' + x.s.tGB + ' GB'}</td><td>${x.s.alb === 'always' ? 'Kept' : 'On failover'}</td>
+      <td class="r num"><b>${usd(r.passive)}</b></td><td class="r num">${usd(r.passive*12,0)}</td><td class="r num">${fx ? inr(r.passive*fx) : '–'}</td>
+      <td class="r num">${usd(r.active)}</td><td><button class="xbtn" data-i="${i}" aria-label="Remove ${esc(x.name)}">Remove</button></td></tr>`;
+  }).join('');
+}
+$('saveBtn').addEventListener('click', () => {
+  const s = readForm(), name = $('scName').value.trim() || `Scenario ${saved.length + 1}`;
+  saved.push({name, s}); store('awsdr-saved', saved); renderSaved();
+});
+$('saved').addEventListener('click', e => { const b = e.target.closest('.xbtn'); if (!b) return; saved.splice(+b.dataset.i, 1); store('awsdr-saved', saved); renderSaved(); });
+
+// ---- init ------------------------------------------------------------------------------------------------
+setForm(Object.assign({fx:88, oman:0}, PRESETS[0].v));
+const last = load('awsdr-form', null);
+if (last) { setForm(last); render(); } else applyPreset(PRESETS[0]);
+renderSaved();
+</script>
+</body>
+</html>
