@@ -178,7 +178,7 @@
     <div class="tri">
       <div><h3><i class="dot" style="background:var(--ok)"></i>Always on</h3><p>DB server (EC2 compute), DB disk, VPN connection, public IPs, backups in S3.</p></div>
       <div><h3><i class="dot" style="background:var(--off)"></i>Stopped</h3><p>Tomcat servers: no compute charge, but their disks (or snapshots) are billed every month.</p></div>
-      <div><h3><i class="dot" style="background:var(--warn)"></i>Only on failover</h3><p>Tomcat compute, load balancer traffic (LCUs) and data sent out to users.</p></div>
+      <div><h3><i class="dot" style="background:var(--warn)"></i>Only on failover</h3><p>Tomcat and local DR DB compute, load balancer traffic (LCUs) and data sent out to users.</p></div>
     </div>
   </section>
 
@@ -198,7 +198,7 @@
             <small>1-yr Reserved = Standard RI, no upfront, 12-month commitment.</small></div>
           <div class="row2">
             <div class="f"><label for="dbGB">DB disk (GB, gp3)</label><input id="dbGB" type="number" min="0" step="1"></div>
-            <div class="f"><label for="dbCount">DB servers</label><input id="dbCount" type="number" min="0" step="1"></div>
+            <div class="f"><label for="dbCount">DB servers</label><input id="dbCount" type="number" min="0" step="1"><small>DB 2+ stay stopped</small></div>
           </div>
           <div class="row2">
             <div class="f"><label for="dbIops">gp3 IOPS</label><input id="dbIops" type="number" min="3000" step="100"><small>3,000 included</small></div>
@@ -434,8 +434,13 @@ function compute(s){
   const rows = [];
   const add = (item, state, how, passive, active) => rows.push({item, state, how, passive, active});
 
-  const dbC = s.dbCount * dbRate * H;
-  add(`DB server · ${s.dbType}`, 'on', `${s.dbCount} × $${dbRate.toFixed(4)}/hr × ${H} h (${s.dbPrice === 'ri' ? '1-yr RI' : 'On-Demand'})`, dbC, dbC);
+  const nPrim = Math.min(1, s.dbCount), nLocal = Math.max(0, s.dbCount - 1);
+  const dbC = nPrim * dbRate * H;
+  add(`DB 1 · DR primary · ${s.dbType}`, 'on', `${nPrim} × $${dbRate.toFixed(4)}/hr × ${H} h (${s.dbPrice === 'ri' ? '1-yr RI' : 'On-Demand'})`, dbC, dbC);
+  if (nLocal) {
+    const locA = nLocal * db.od * H;
+    add(`Local DR DB · ${s.dbType}`, 'off', `${nLocal} stopped: no compute charge (on DR: On-Demand × ${H} h)`, 0, locA);
+  }
 
   const dbDisk = s.dbCount * (ebsOf(s.dbGB) + Math.max(0, s.dbIops - 3000) * P.gp3Iops + Math.max(0, s.dbTp - 125) * P.gp3Tp);
   add('DB disk · gp3', 'on', `${s.dbCount} × ${s.dbGB} GB` + (s.dbIops > 3000 ? `, ${s.dbIops} IOPS` : '') + (s.dbTp > 125 ? `, ${s.dbTp} MB/s` : ''), dbDisk, dbDisk);
@@ -471,7 +476,7 @@ function compute(s){
 }
 
 // ---- diagram: AWS side follows the calculator inputs ----------------------------------------
-const AX = 440, AW = 524;                 // usable x-range inside the AWS panel
+const AX = 440, AW = 524;                 // usable x-range inside the AWS panel (px)
 function row(n, maxW, gap = 12){           // evenly spaced boxes across the panel
   const w = Math.min(maxW, (AW - (n - 1) * gap) / n);
   const start = AX + (AW - (n * w + (n - 1) * gap)) / 2;
@@ -499,7 +504,7 @@ function drawDiagram(s){
     boxes += `<text class="s-cap" x="702" y="${dY + 30}" text-anchor="middle">No DB server</text>`;
   } else if (nD > MAX) {
     dbs = [{x:552, w:300}];
-    boxes += box('n-on', 552, dY, 300, dH, `Oracle DB × ${nD}`, `DB 1 DR primary · ${nD - 1} local DR`);
+    boxes += box('n-on', 552, dY, 300, dH, `Oracle DB × ${nD}`, `DB 1 DR primary · ${nD - 1} stopped (passive)`);
   } else {
     dbs = row(nD, 300, nD > 1 ? 40 : 12);
     dbs.forEach((b, i) => {
@@ -507,10 +512,10 @@ function drawDiagram(s){
       let title, sub;
       if (nD === 1) { title = 'Oracle DB (DR primary)'; sub = `${s.dbType} · ${s.dbGB} GB · 24×7`; }
       else if (i === 0) { title = wide ? 'DB 1 · DR primary' : (mid ? 'DB 1 · primary' : 'DB 1'); sub = wide ? `${s.dbType} · ${s.dbGB} GB · from on-prem` : (mid ? 'From on-prem' : 'Primary'); }
-      else { title = wide ? `DB ${i+1} · local DR` : (mid ? `DB ${i+1} · local DR` : `DB ${i+1}`); sub = wide ? `${s.dbType} · ${s.dbGB} GB · copy of DB ${i}` : (mid ? `Copy of DB ${i}` : 'Local DR'); }
-      boxes += box('n-on', b.x, dY, b.w, dH, title, sub);
-      // local log apply DB i -> DB i+1
-      if (i > 0) { const p = dbs[i-1]; lines += `<path class="ln ln-repl" d="M${p.x + p.w} ${dY + dH/2} H${b.x - 4}" marker-end="url(#ar)"/>`; }
+      else { title = mid ? `DB ${i+1} · local DR` : `DB ${i+1}`; sub = wide ? `${s.dbType} · ${s.dbGB} GB · stopped (passive)` : (mid ? 'Stopped (passive)' : 'Stopped'); }
+      boxes += box(i === 0 ? 'n-on' : 'n-off', b.x, dY, b.w, dH, title, sub);
+      // local DR DBs stay stopped; they are started and synced from DB 1 only when needed
+      if (i > 0) { const p = dbs[i-1]; lines += `<path class="ln ln-dim" d="M${p.x + p.w} ${dY + dH/2} H${b.x - 4}" marker-end="url(#ad)"/>`; }
     });
   }
   const prim = dbs[0];
@@ -537,7 +542,7 @@ function drawDiagram(s){
 
   $('dyn').innerHTML = lines + boxes;
   $('dyn').closest('svg').setAttribute('aria-label',
-    `On-premises Mumbai primary replicating over VPN to AWS Mumbai passive DR: load balancer ${lbOn ? 'idle' : 'created at failover'}, ${nT} Tomcat server${nT === 1 ? '' : 's'} stopped and connected to the DR primary DB, ${nD} DB server${nD === 1 ? '' : 's'} running` + (nD > 1 ? `, DB 1 is the DR primary and the others are local DR copies` : ''));
+    `On-premises Mumbai primary replicating over VPN to AWS Mumbai passive DR: load balancer ${lbOn ? 'idle' : 'created at failover'}, ${nT} Tomcat server${nT === 1 ? '' : 's'} stopped and connected to the DR primary DB, ${nD} DB server${nD === 1 ? '' : 's'} running` + (nD > 1 ? `, DB 1 is the running DR primary and the others are stopped passive local DR servers` : ''));
 }
 
 // ---- render -------------------------------------------------------------------------------------------
