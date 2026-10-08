@@ -158,16 +158,16 @@
     <h2>What runs, and what you pay for</h2>
     <p class="sub">In passive mode AWS charges for the running DB server, all disks (EBS volumes), the idle load balancer and the VPN link. Stopped servers have no compute charge.</p>
     <div class="diagram">
-      <svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="On-premises Mumbai primary replicating over VPN to AWS Mumbai passive DR: load balancer idle, two Tomcat servers stopped, DB server running">
-        <defs><marker id="ar" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--sb)"/></marker></defs>
-        <rect class="s-box" x="16" y="20" width="300" height="262" rx="14"/>
+      <svg viewBox="0 0 1000 336" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="On-premises Mumbai primary replicating over VPN to AWS Mumbai passive DR: load balancer idle, two Tomcat servers stopped, DB server running">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--sb)"/></marker><marker id="ad" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--off)"/></marker></defs>
+        <rect class="s-box" x="16" y="20" width="300" height="298" rx="14"/>
         <text class="s-name" x="32" y="46">PRIMARY · ON-PREMISES</text>
         <text class="s-cap" x="32" y="62">Current Mumbai data centre (production)</text>
         <g class="n-on"><rect x="76" y="88" width="180" height="48" rx="10"/><text class="nt" x="166" y="108" text-anchor="middle">LB + 3 Tomcat</text><text class="ns" x="166" y="124" text-anchor="middle">Serving users</text></g>
         <g class="n-on"><rect x="76" y="186" width="180" height="56" rx="10"/><text class="nt" x="166" y="210" text-anchor="middle">Oracle DB (primary)</text><text class="ns" x="166" y="227" text-anchor="middle">Ships logs to AWS</text></g>
         <path class="ln" d="M166 136 V186" style="stroke:var(--ink);opacity:.4"/>
 
-        <rect class="s-box" x="420" y="20" width="564" height="262" rx="14"/>
+        <rect class="s-box" x="420" y="20" width="564" height="298" rx="14"/>
         <text class="s-name" x="436" y="46">PASSIVE DR · AWS MUMBAI (ap-south-1)</text>
         <text class="s-cap" x="436" y="62">VPC · billed per hour / per GB-month</text>
         <g id="dyn"></g>
@@ -471,9 +471,9 @@ function compute(s){
 }
 
 // ---- diagram: AWS side follows the calculator inputs ----------------------------------------
-const AX = 440, AW = 524;                 // usable width inside the AWS panel
-function row(n, maxW){                     // evenly spaced boxes across the panel
-  const gap = 12, w = Math.min(maxW, (AW - (n - 1) * gap) / n);
+const AX = 440, AW = 524;                 // usable x-range inside the AWS panel
+function row(n, maxW, gap = 12){           // evenly spaced boxes across the panel
+  const w = Math.min(maxW, (AW - (n - 1) * gap) / n);
   const start = AX + (AW - (n * w + (n - 1) * gap)) / 2;
   return Array.from({length:n}, (_, i) => ({x: start + i * (w + gap), w}));
 }
@@ -486,52 +486,58 @@ function box(cls, x, y, w, h, title, sub){
 function drawDiagram(s){
   const nT = Math.round(s.tCount), nD = Math.round(s.dbCount);
   const MAX = 6;
-  let g = '';
+  let lines = '', boxes = '';
 
   // load balancer
   const lbOn = s.alb === 'always';
-  g += box(lbOn ? 'n-idle' : 'n-off', 612, 76, 180, 48, 'Application LB', lbOn ? 'Idle · hourly charge' : 'Created at failover');
+  boxes += box(lbOn ? 'n-idle' : 'n-off', 612, 76, 180, 48, 'Application LB', lbOn ? 'Idle · hourly charge' : 'Created at failover');
+
+  // db row first, so the Tomcats know where DB 1 (the DR primary) is
+  const dY = 250, dH = 52;
+  let dbs = [];
+  if (nD === 0) {
+    boxes += `<text class="s-cap" x="702" y="${dY + 30}" text-anchor="middle">No DB server</text>`;
+  } else if (nD > MAX) {
+    dbs = [{x:552, w:300}];
+    boxes += box('n-on', 552, dY, 300, dH, `Oracle DB × ${nD}`, `DB 1 DR primary · ${nD - 1} local DR`);
+  } else {
+    dbs = row(nD, 300, nD > 1 ? 40 : 12);
+    dbs.forEach((b, i) => {
+      const wide = b.w >= 230, mid = b.w >= 120;
+      let title, sub;
+      if (nD === 1) { title = 'Oracle DB (DR primary)'; sub = `${s.dbType} · ${s.dbGB} GB · 24×7`; }
+      else if (i === 0) { title = wide ? 'DB 1 · DR primary' : (mid ? 'DB 1 · primary' : 'DB 1'); sub = wide ? `${s.dbType} · ${s.dbGB} GB · from on-prem` : (mid ? 'From on-prem' : 'Primary'); }
+      else { title = wide ? `DB ${i+1} · local DR` : (mid ? `DB ${i+1} · local DR` : `DB ${i+1}`); sub = wide ? `${s.dbType} · ${s.dbGB} GB · copy of DB ${i}` : (mid ? `Copy of DB ${i}` : 'Local DR'); }
+      boxes += box('n-on', b.x, dY, b.w, dH, title, sub);
+      // local log apply DB i -> DB i+1
+      if (i > 0) { const p = dbs[i-1]; lines += `<path class="ln ln-repl" d="M${p.x + p.w} ${dY + dH/2} H${b.x - 4}" marker-end="url(#ar)"/>`; }
+    });
+  }
+  const prim = dbs[0];
 
   // tomcat row
   const tY = 146, tH = 52;
   const tSub = s.tDisk === 'snap' ? 'Stopped · snapshot only' : 'Stopped · gp3 disk';
+  const toDb = cx => prim ? `<path class="ln ln-dim" d="M${cx} ${tY + tH} L${prim.x + prim.w/2} ${dY}" marker-end="url(#ad)"/>` : '';
   if (nT === 0) {
-    g += `<text class="s-cap" x="702" y="${tY + 30}" text-anchor="middle">No Tomcat servers</text>`;
+    boxes += `<text class="s-cap" x="702" y="${tY + 30}" text-anchor="middle">No Tomcat servers</text>`;
   } else if (nT > MAX) {
-    g += `<path class="ln ln-dim" d="M702 124 V${tY}"/>`;
-    g += box('n-off', 572, tY, 260, tH, `Tomcat × ${nT} (${s.tType})`, tSub);
+    lines += `<path class="ln ln-dim" d="M702 124 V${tY}"/>` + toDb(702);
+    boxes += box('n-off', 572, tY, 260, tH, `Tomcat × ${nT} (${s.tType})`, tSub);
   } else {
     row(nT, 190).forEach((b, i) => {
-      const wide = b.w >= 150, mid = b.w >= 105;
-      g += `<path class="ln ln-dim" d="M702 124 L${b.x + b.w/2} ${tY}"/>`;
-      g += box('n-off', b.x, tY, b.w, tH, wide ? `Tomcat ${i+1} (${s.tType})` : `Tomcat ${i+1}`, wide ? tSub : (mid ? 'Stopped' : 'Off'));
+      const cx = b.x + b.w/2, wide = b.w >= 150, mid = b.w >= 105;
+      lines += `<path class="ln ln-dim" d="M702 124 L${cx} ${tY}"/>` + toDb(cx);
+      boxes += box('n-off', b.x, tY, b.w, tH, wide ? `Tomcat ${i+1} (${s.tType})` : `Tomcat ${i+1}`, wide ? tSub : (mid ? 'Stopped' : 'Off'));
     });
   }
 
-  // db row
-  const dY = 216, dH = 52;
-  const dSub = `${s.dbType} · ${s.dbGB} GB · 24×7`;
-  let target = null;
-  if (nD === 0) {
-    g += `<text class="s-cap" x="702" y="${dY + 30}" text-anchor="middle">No DB server</text>`;
-  } else if (nD > MAX) {
-    g += box('n-on', 552, dY, 300, dH, `Oracle DB standby × ${nD}`, dSub);
-    target = {x:552, y:dY + dH/2};
-  } else {
-    row(nD, 300).forEach((b, i) => {
-      const wide = b.w >= 230, mid = b.w >= 140;
-      const title = nD === 1 ? 'Oracle DB standby' : (mid ? `DB standby ${i+1}` : `DB ${i+1}`);
-      g += box('n-on', b.x, dY, b.w, dH, title, wide ? dSub : (mid ? s.dbType : 'Running'));
-      if (i === 0) target = {x:b.x, y:dY + dH/2};
-    });
-  }
+  // replication from on-prem primary into DB 1
+  if (prim) lines += `<path class="ln ln-repl" d="M256 214 C360 214, ${prim.x - 90} ${dY + dH/2}, ${prim.x - 4} ${dY + dH/2}" marker-end="url(#ar)"/>`;
 
-  // replication from on-prem primary
-  if (target) g += `<path class="ln ln-repl" d="M256 214 C360 214, ${target.x - 90} ${target.y}, ${target.x - 4} ${target.y}" marker-end="url(#ar)"/>`;
-
-  $('dyn').innerHTML = g;
+  $('dyn').innerHTML = lines + boxes;
   $('dyn').closest('svg').setAttribute('aria-label',
-    `On-premises Mumbai primary replicating over VPN to AWS Mumbai passive DR: load balancer ${lbOn ? 'idle' : 'created at failover'}, ${nT} Tomcat server${nT === 1 ? '' : 's'} stopped, ${nD} DB server${nD === 1 ? '' : 's'} running`);
+    `On-premises Mumbai primary replicating over VPN to AWS Mumbai passive DR: load balancer ${lbOn ? 'idle' : 'created at failover'}, ${nT} Tomcat server${nT === 1 ? '' : 's'} stopped and connected to the DR primary DB, ${nD} DB server${nD === 1 ? '' : 's'} running` + (nD > 1 ? `, DB 1 is the DR primary and the others are local DR copies` : ''));
 }
 
 // ---- render -------------------------------------------------------------------------------------------
