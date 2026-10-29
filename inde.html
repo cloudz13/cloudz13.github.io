@@ -3,31 +3,74 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CloudZ13 Pages</title>
+<title>CloudZ13 Page Directory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--ink:#1a1d23;--muted:#5b6270;--line:#e3e6eb;--accent:#2457d6}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#171a21;--ink:#e8eaee;--muted:#9aa2b1;--line:#2a2f3a;--accent:#7aa2ff}}
-:root[data-theme="dark"]{--bg:#0f1115;--card:#171a21;--ink:#e8eaee;--muted:#9aa2b1;--line:#2a2f3a;--accent:#7aa2ff}
+:root{--bg:#f5f7fa;--card:#fff;--ink:#0f1c2e;--body:#3d4b5c;--muted:#6b7a8c;--line:#e1e6ed;--accent:#1d4ed8;--accent-soft:#e8effd}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1117;--card:#161b22;--ink:#e6edf3;--body:#c2cad4;--muted:#8b96a3;--line:#262d36;--accent:#79a6ff;--accent-soft:#1a2440}}
+:root[data-theme="dark"]{--bg:#0d1117;--card:#161b22;--ink:#e6edf3;--body:#c2cad4;--muted:#8b96a3;--line:#262d36;--accent:#79a6ff;--accent-soft:#1a2440}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:720px;margin:0 auto;padding:32px 16px}
-h1{font-size:24px;margin:0 0 16px}
-a{display:block;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-bottom:10px;text-decoration:none;color:var(--ink)}
-a:hover{border-color:var(--accent)}
-a b{display:block;color:var(--accent)}
-a span{font-size:13px;color:var(--muted)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line)}
+.wrap{max-width:960px;margin:0 auto;padding:0 16px}
+.top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:28px 0}
+.brand{font-weight:700;font-size:22px;letter-spacing:-.01em}
+.brand span{color:var(--accent)}
+.tagline{color:var(--muted);font-size:14px;margin-top:2px}
+input{width:260px;max-width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px}
+input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+main{padding:28px 0 56px}
+section{margin-bottom:32px}
+h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px;display:flex;align-items:center;gap:8px}
+h2 .n{background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:1px 8px;font-size:11px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+a.c{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;text-decoration:none;color:inherit;transition:border-color .15s,transform .15s,box-shadow .15s}
+a.c:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 6px 18px rgba(15,28,46,.08)}
+a.c b{display:block;font-weight:600;color:var(--ink);margin-bottom:4px}
+a.c p{margin:0 0 10px;font-size:13.5px;color:var(--body)}
+a.c small{font-size:12px;color:var(--muted);font-family:ui-monospace,Consolas,monospace}
+footer{color:var(--muted);font-size:13px;text-align:center;padding-bottom:32px}
+.hide{display:none}
 </style>
 </head>
 <body>
-<div class="wrap">
-<h1>All Pages</h1>
-<a href="index.html"><b>CloudZ13 Home</b><span>index.html</span></a>
-<a href="shivam-medisoft-db-dr.html"><b>Shivam Medisoft DB DR: Ransomware Defense</b><span>shivam-medisoft-db-dr.html</span></a>
-<a href="dr-scenarios.html"><b>Mumbai–Oman DR Scenarios</b><span>dr-scenarios.html</span></a>
-<a href="aws-dr-cost.html"><b>AWS Passive DR Cost</b><span>aws-dr-cost.html</span></a>
-<a href="sachine.html"><b>Sachine Consolidation</b><span>sachine.html</span></a>
-<a href="desiree-daga.html"><b>Teacher Desiree Gwyn Daga</b><span>desiree-daga.html</span></a>
-<a href="green.html"><b>Dandiya Night Invitation</b><span>green.html</span></a>
-</div>
+<header><div class="wrap top">
+<div><div class="brand">Cloud<span>Z13</span></div><div class="tagline">Page directory</div></div>
+<input id="q" type="search" placeholder="Search pages…" aria-label="Search pages">
+</div></header>
+
+<main class="wrap">
+<section><h2>Company <span class="n">1</span></h2><div class="grid">
+<a class="c" href="index.html"><b>CloudZ13 Home</b><p>Enterprise-grade Oracle DR &amp; DBA services on Standard Edition.</p><small>index.html</small></a>
+</div></section>
+
+<section><h2>Oracle DR &amp; Security <span class="n">2</span></h2><div class="grid">
+<a class="c" href="shivam-medisoft-db-dr.html"><b>Shivam Medisoft: DB DR Ransomware Defense</b><p>Attack points and fixes for the Hyderabad–Mumbai Oracle 21c setup.</p><small>shivam-medisoft-db-dr.html</small></a>
+<a class="c" href="dr-scenarios.html"><b>Mumbai–Oman DR Scenarios</b><p>Failure scenarios and recovery paths across sites.</p><small>dr-scenarios.html</small></a>
+</div></section>
+
+<section><h2>Cloud Cost <span class="n">1</span></h2><div class="grid">
+<a class="c" href="aws-dr-cost.html"><b>AWS Passive DR Cost</b><p>Cost estimate for a passive DR environment on AWS.</p><small>aws-dr-cost.html</small></a>
+</div></section>
+
+<section><h2>Finance <span class="n">1</span></h2><div class="grid">
+<a class="c" href="sachine.html"><b>Sachine Consolidation</b><p>CFO one-pager and consolidation report desk.</p><small>sachine.html</small></a>
+</div></section>
+
+<section><h2>Personal &amp; Events <span class="n">2</span></h2><div class="grid">
+<a class="c" href="desiree-daga.html"><b>Teacher Desiree Gwyn Daga</b><p>Teacher profile page.</p><small>desiree-daga.html</small></a>
+<a class="c" href="green.html"><b>Dandiya Night Invitation</b><p>Event invitation.</p><small>green.html</small></a>
+</div></section>
+</main>
+<footer>© CloudZ13</footer>
+
+<script>
+const q=document.getElementById('q');
+q.addEventListener('input',()=>{const t=q.value.toLowerCase();
+document.querySelectorAll('section').forEach(s=>{let v=0;
+s.querySelectorAll('a.c').forEach(a=>{const m=a.textContent.toLowerCase().includes(t);a.classList.toggle('hide',!m);if(m)v++});
+s.classList.toggle('hide',!v)})});
+</script>
 </body>
 </html>
