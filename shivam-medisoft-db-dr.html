@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oracle Ransomware Defense</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1a1d23;--muted:#5b6270;--line:#e3e6eb;--accent:#2457d6;--crit:#c62828;--high:#e06c00}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#171a21;--ink:#e8eaee;--muted:#9aa2b1;--line:#2a2f3a;--accent:#7aa2ff;--crit:#ff6b6b;--high:#ffa24d}}
+:root[data-theme="dark"]{--bg:#0f1115;--card:#171a21;--ink:#e8eaee;--muted:#9aa2b1;--line:#2a2f3a;--accent:#7aa2ff;--crit:#ff6b6b;--high:#ffa24d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:32px 16px 48px}
+h1{font-size:24px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 20px;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;border-top:3px solid var(--sev)}
+.card h3{margin:0 0 6px;font-size:15px}
+.tag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sev)}
+ul{margin:0;padding-left:18px}
+li{font-size:13.5px;margin:2px 0}
+.crit{--sev:var(--crit)}.high{--sev:var(--high)}
+h2{font-size:16px;margin:24px 0 10px}
+.plan{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px 16px}
+.plan p{margin:0;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.plan p:last-child{border-bottom:0}
+.plan b{color:var(--accent);display:inline-block;min-width:90px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Oracle 21c DR: Ransomware Defense</h1>
+<p class="sub">Shivam Medisoft · Primary Hyderabad → Standby Mumbai → MIS snapshot</p>
+
+<div class="grid">
+<div class="card crit"><span class="tag">Critical</span><h3>Backups can be encrypted</h3>
+<ul><li>Keep one copy offline or immutable</li><li>Keep backup storage off the DB hosts</li><li>Test restores every quarter</li></ul></div>
+
+<div class="card crit"><span class="tag">Critical</span><h3>Infection copied to DR</h3>
+<ul><li>Apply logs on the standby 2–4 hours late</li><li>Turn on Flashback and keep restore points</li></ul></div>
+
+<div class="card crit"><span class="tag">Critical</span><h3>Unpatched software</h3>
+<ul><li>Patch Oracle (quarterly RUs), the OS and the VPN on a schedule</li><li>Upgrade to 23ai before 2027</li></ul></div>
+
+<div class="card high"><span class="tag">High</span><h3>VPN &amp; app server entry</h3>
+<ul><li>Require MFA on the VPN; route users through a jump host only</li><li>Run EDR on the app server; give the app account no DBA rights</li></ul></div>
+
+<div class="card high"><span class="tag">High</span><h3>Spread between servers</h3>
+<ul><li>Use host firewalls: port 1521 from the app server only</li><li>Isolate MIS from the standby and backups</li><li>Use unique, vaulted admin passwords</li></ul></div>
+
+<div class="card high"><span class="tag">High</span><h3>Slow detection &amp; recovery</h3>
+<ul><li>Run EDR on DB hosts and alert on mass file changes</li><li>Keep an offline runbook; drill it twice a year</li></ul></div>
+</div>
+
+<h2>Action plan</h2>
+<div class="plan">
+<p><b>Week 1–2</b>Immutable backup, VPN MFA, host firewalls</p>
+<p><b>Month 1</b>Delayed apply + Flashback, EDR, jump host</p>
+<p><b>Quarter 1</b>Restore drill, full patching</p>
+<p><b>2026–27</b>Upgrade to 23ai</p>
+</div>
+</div>
+</body>
+</html>
