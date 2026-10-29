@@ -7,70 +7,134 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f5f7fa;--card:#fff;--ink:#0f1c2e;--body:#3d4b5c;--muted:#6b7a8c;--line:#e1e6ed;--accent:#1d4ed8;--accent-soft:#e8effd}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1117;--card:#161b22;--ink:#e6edf3;--body:#c2cad4;--muted:#8b96a3;--line:#262d36;--accent:#79a6ff;--accent-soft:#1a2440}}
-:root[data-theme="dark"]{--bg:#0d1117;--card:#161b22;--ink:#e6edf3;--body:#c2cad4;--muted:#8b96a3;--line:#262d36;--accent:#79a6ff;--accent-soft:#1a2440}
+:root{--bg:#f4f6f9;--card:#fff;--ink:#0f1c2e;--body:#3d4b5c;--muted:#6b7a8c;--line:#e1e6ed;--hover:#f7f9fc;--accent:#1d4ed8;--accent-soft:#e8effd;--hdr:#0f1c2e;--hdr-ink:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0f14;--card:#141a21;--ink:#e6edf3;--body:#c2cad4;--muted:#8b96a3;--line:#252c35;--hover:#1a212a;--accent:#79a6ff;--accent-soft:#1a2440;--hdr:#0f141b;--hdr-ink:#e6edf3}}
+:root[data-theme="dark"]{--bg:#0b0f14;--card:#141a21;--ink:#e6edf3;--body:#c2cad4;--muted:#8b96a3;--line:#252c35;--hover:#1a212a;--accent:#79a6ff;--accent-soft:#1a2440;--hdr:#0f141b;--hdr-ink:#e6edf3}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
-header{background:var(--card);border-bottom:1px solid var(--line)}
-.wrap{max-width:960px;margin:0 auto;padding:0 16px}
-.top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:28px 0}
-.brand{font-weight:700;font-size:22px;letter-spacing:-.01em}
-.brand span{color:var(--accent)}
-.tagline{color:var(--muted);font-size:14px;margin-top:2px}
-input{width:260px;max-width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px}
-input:focus{outline:2px solid var(--accent);outline-offset:-1px}
-main{padding:28px 0 56px}
-section{margin-bottom:32px}
-h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px;display:flex;align-items:center;gap:8px}
-h2 .n{background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:1px 8px;font-size:11px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-a.c{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;text-decoration:none;color:inherit;transition:border-color .15s,transform .15s,box-shadow .15s}
-a.c:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 6px 18px rgba(15,28,46,.08)}
-a.c b{display:block;font-weight:600;color:var(--ink);margin-bottom:4px}
-a.c p{margin:0 0 10px;font-size:13.5px;color:var(--body)}
-a.c small{font-size:12px;color:var(--muted);font-family:ui-monospace,Consolas,monospace}
-footer{color:var(--muted);font-size:13px;text-align:center;padding-bottom:32px}
-.hide{display:none}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1600px;margin:0 auto;padding:0 24px}
+header{background:var(--hdr);color:var(--hdr-ink);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:16px}
+.brand{font-weight:700;font-size:17px;letter-spacing:-.01em}
+.brand span{color:#79a6ff}
+.brand em{font-style:normal;font-weight:400;opacity:.6;margin-left:10px;font-size:13px}
+.kpis{display:flex;gap:24px;font-size:12.5px;opacity:.85}
+.kpis b{font-size:15px;margin-right:4px}
+.layout{display:grid;grid-template-columns:220px 1fr;gap:24px;padding:20px 0 48px}
+aside{position:sticky;top:16px;align-self:start}
+aside h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:4px 0 8px;font-weight:600}
+.cat{display:flex;justify-content:space-between;width:100%;padding:7px 10px;border:0;background:none;color:var(--body);font:inherit;font-size:13.5px;border-radius:6px;cursor:pointer;text-align:left}
+.cat:hover{background:var(--hover)}
+.cat.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.cat span{color:var(--muted);font-size:12px}
+.cat.on span{color:var(--accent)}
+.bar{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.bar input{flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);font:inherit}
+.bar input:focus,.bar select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.bar select,.seg button{padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+.seg{display:flex}
+.seg button{border-radius:0}
+.seg button:first-child{border-radius:7px 0 0 7px}
+.seg button:last-child{border-radius:0 7px 7px 0;border-left:0}
+.seg button.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.count{color:var(--muted);font-size:12.5px;margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.tile{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:11px 13px;text-decoration:none;color:inherit;transition:border-color .12s,box-shadow .12s}
+.tile:hover{border-color:var(--accent);box-shadow:0 3px 12px rgba(15,28,46,.07)}
+.tile b{font-weight:600;font-size:13.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile p{margin:3px 0 8px;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto;gap:6px}
+.badge{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.file{font:11px ui-monospace,Consolas,monospace;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+th{position:sticky;top:0;background:var(--hover);text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line)}
+td{padding:8px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--hover)}
+td a{color:var(--ink);font-weight:500;text-decoration:none}
+td a:hover{color:var(--accent)}
+td.d{color:var(--muted)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+@media (max-width:760px){
+.wrap{padding:0 16px}.kpis{display:none}
+.layout{grid-template-columns:1fr;gap:12px}
+aside{position:static;display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+aside h3{display:none}.cat{width:auto;white-space:nowrap;border:1px solid var(--line);gap:6px}
+td.d,th.d{display:none}
+}
 </style>
 </head>
 <body>
-<header><div class="wrap top">
-<div><div class="brand">Cloud<span>Z13</span></div><div class="tagline">Page directory</div></div>
-<input id="q" type="search" placeholder="Search pages…" aria-label="Search pages">
+<header><div class="wrap">
+<div class="brand">Cloud<span>Z13</span><em>Page Directory</em></div>
+<div class="kpis"><div><b id="kTotal">0</b>pages</div><div><b id="kCats">0</b>categories</div></div>
 </div></header>
 
-<main class="wrap">
-<section><h2>Company <span class="n">1</span></h2><div class="grid">
-<a class="c" href="index.html"><b>CloudZ13 Home</b><p>Enterprise-grade Oracle DR &amp; DBA services on Standard Edition.</p><small>index.html</small></a>
-</div></section>
-
-<section><h2>Oracle DR &amp; Security <span class="n">2</span></h2><div class="grid">
-<a class="c" href="shivam-medisoft-db-dr.html"><b>Shivam Medisoft: DB DR Ransomware Defense</b><p>Attack points and fixes for the Hyderabad–Mumbai Oracle 21c setup.</p><small>shivam-medisoft-db-dr.html</small></a>
-<a class="c" href="dr-scenarios.html"><b>Mumbai–Oman DR Scenarios</b><p>Failure scenarios and recovery paths across sites.</p><small>dr-scenarios.html</small></a>
-</div></section>
-
-<section><h2>Cloud Cost <span class="n">1</span></h2><div class="grid">
-<a class="c" href="aws-dr-cost.html"><b>AWS Passive DR Cost</b><p>Cost estimate for a passive DR environment on AWS.</p><small>aws-dr-cost.html</small></a>
-</div></section>
-
-<section><h2>Finance <span class="n">1</span></h2><div class="grid">
-<a class="c" href="sachine.html"><b>Sachine Consolidation</b><p>CFO one-pager and consolidation report desk.</p><small>sachine.html</small></a>
-</div></section>
-
-<section><h2>Personal &amp; Events <span class="n">2</span></h2><div class="grid">
-<a class="c" href="desiree-daga.html"><b>Teacher Desiree Gwyn Daga</b><p>Teacher profile page.</p><small>desiree-daga.html</small></a>
-<a class="c" href="green.html"><b>Dandiya Night Invitation</b><p>Event invitation.</p><small>green.html</small></a>
-</div></section>
+<div class="wrap layout">
+<aside id="cats"><h3>Categories</h3></aside>
+<main>
+<div class="bar">
+<input id="q" type="search" placeholder="Search title, description or file…" aria-label="Search">
+<select id="sort" aria-label="Sort">
+<option value="cat">Sort: Category</option>
+<option value="az">Sort: A–Z</option>
+<option value="za">Sort: Z–A</option>
+</select>
+<div class="seg"><button id="vGrid" class="on">Tiles</button><button id="vList">List</button></div>
+<span class="count" id="count"></span>
+</div>
+<div id="out"></div>
 </main>
-<footer>© CloudZ13</footer>
+</div>
 
 <script>
-const q=document.getElementById('q');
-q.addEventListener('input',()=>{const t=q.value.toLowerCase();
-document.querySelectorAll('section').forEach(s=>{let v=0;
-s.querySelectorAll('a.c').forEach(a=>{const m=a.textContent.toLowerCase().includes(t);a.classList.toggle('hide',!m);if(m)v++});
-s.classList.toggle('hide',!v)})});
+// Add new pages here: {file, title, desc, cat}
+const PAGES=[
+{file:"index.html",title:"CloudZ13 Home",desc:"Enterprise-grade Oracle DR & DBA services on Standard Edition",cat:"Company"},
+{file:"shivam-medisoft-db-dr.html",title:"Shivam Medisoft: DB DR Ransomware Defense",desc:"Attack points and fixes for the Hyderabad–Mumbai Oracle 21c setup",cat:"Oracle DR & Security"},
+{file:"dr-scenarios.html",title:"Mumbai–Oman DR Scenarios",desc:"Failure scenarios and recovery paths across sites",cat:"Oracle DR & Security"},
+{file:"aws-dr-cost.html",title:"AWS Passive DR Cost",desc:"Cost estimate for a passive DR environment on AWS",cat:"Cloud Cost"},
+{file:"sachine.html",title:"Sachine Consolidation",desc:"CFO one-pager and consolidation report desk",cat:"Finance"},
+{file:"desiree-daga.html",title:"Teacher Desiree Gwyn Daga",desc:"Teacher profile page",cat:"Personal & Events"},
+{file:"green.html",title:"Dandiya Night Invitation",desc:"Event invitation",cat:"Personal & Events"}
+];
+
+const CATS=[...new Set(PAGES.map(p=>p.cat))];
+const st={cat:"All",q:"",sort:"cat",view:"grid"};
+try{st.view=localStorage.getItem("dirView")||"grid"}catch(e){}
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+$("kTotal").textContent=PAGES.length;$("kCats").textContent=CATS.length;
+
+function renderCats(){
+  const a=$("cats");a.querySelectorAll(".cat").forEach(b=>b.remove());
+  ["All",...CATS].forEach(c=>{
+    const n=c==="All"?PAGES.length:PAGES.filter(p=>p.cat===c).length;
+    const b=document.createElement("button");
+    b.className="cat"+(st.cat===c?" on":"");
+    b.innerHTML=`${esc(c)}<span>${n}</span>`;
+    b.onclick=()=>{st.cat=c;renderCats();render()};
+    a.appendChild(b);
+  });
+}
+function render(){
+  const t=st.q.toLowerCase();
+  let r=PAGES.filter(p=>(st.cat==="All"||p.cat===st.cat)&&(p.title+" "+p.desc+" "+p.file).toLowerCase().includes(t));
+  const byT=(a,b)=>a.title.localeCompare(b.title);
+  r.sort(st.sort==="az"?byT:st.sort==="za"?(a,b)=>byT(b,a):(a,b)=>CATS.indexOf(a.cat)-CATS.indexOf(b.cat)||byT(a,b));
+  $("count").textContent=`${r.length} of ${PAGES.length}`;
+  const o=$("out");
+  if(!r.length){o.innerHTML='<div class="empty">No pages match.</div>';return}
+  o.innerHTML=st.view==="grid"
+    ? `<div class="grid">${r.map(p=>`<a class="tile" href="${esc(p.file)}" title="${esc(p.title)}"><b>${esc(p.title)}</b><p>${esc(p.desc)}</p><div class="meta"><span class="file">${esc(p.file)}</span><span class="badge">${esc(p.cat)}</span></div></a>`).join("")}</div>`
+    : `<table><thead><tr><th>Title</th><th class="d">Description</th><th>Category</th><th class="d">File</th></tr></thead><tbody>${r.map(p=>`<tr><td><a href="${esc(p.file)}">${esc(p.title)}</a></td><td class="d">${esc(p.desc)}</td><td><span class="badge">${esc(p.cat)}</span></td><td class="d file">${esc(p.file)}</td></tr>`).join("")}</tbody></table>`;
+  $("vGrid").classList.toggle("on",st.view==="grid");$("vList").classList.toggle("on",st.view==="list");
+}
+$("q").oninput=e=>{st.q=e.target.value;render()};
+$("sort").onchange=e=>{st.sort=e.target.value;render()};
+const setView=v=>{st.view=v;try{localStorage.setItem("dirView",v)}catch(e){}render()};
+$("vGrid").onclick=()=>setView("grid");$("vList").onclick=()=>setView("list");
+renderCats();render();
 </script>
 </body>
 </html>
