@@ -44,7 +44,10 @@ aside h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(
 .tile b{font-weight:600;font-size:13.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile p{margin:3px 0 8px;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile .meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto;gap:6px}
-.badge{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.badge{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:10px;background:color-mix(in srgb,var(--cc,var(--accent)) 14%,transparent);color:var(--cc,var(--accent));white-space:nowrap}
+.tile{border-left:3px solid var(--cc,var(--accent))}
+.cat i{font-style:normal;margin-right:8px}
+.cat{align-items:center}.cat span{margin-left:auto}
 .file{font:11px ui-monospace,Consolas,monospace;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 th{position:sticky;top:0;background:var(--hover);text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line)}
@@ -99,6 +102,15 @@ const PAGES=[
 {file:"green.html",title:"Dandiya Night Invitation",desc:"Event invitation",cat:"Personal & Events"}
 ];
 
+// Category look: {emoji, color}. Unknown categories fall back to 📄 + accent.
+const CAT_META={
+"Company":{e:"🏢",c:"#2563eb"},
+"Oracle DR & Security":{e:"🛡️",c:"#dc2626"},
+"Cloud Cost":{e:"☁️",c:"#0891b2"},
+"Finance":{e:"💰",c:"#16a34a"},
+"Personal & Events":{e:"🎉",c:"#c026d3"}
+};
+const meta=c=>CAT_META[c]||{e:"📄",c:"var(--accent)"};
 const CATS=[...new Set(PAGES.map(p=>p.cat))];
 const st={cat:"All",q:"",sort:"cat",view:"grid"};
 try{st.view=localStorage.getItem("dirView")||"grid"}catch(e){}
@@ -112,7 +124,7 @@ function renderCats(){
     const n=c==="All"?PAGES.length:PAGES.filter(p=>p.cat===c).length;
     const b=document.createElement("button");
     b.className="cat"+(st.cat===c?" on":"");
-    b.innerHTML=`${esc(c)}<span>${n}</span>`;
+    b.innerHTML=`<i>${c==="All"?"📚":meta(c).e}</i>${esc(c)}<span>${n}</span>`;
     b.onclick=()=>{st.cat=c;renderCats();render()};
     a.appendChild(b);
   });
@@ -126,8 +138,8 @@ function render(){
   const o=$("out");
   if(!r.length){o.innerHTML='<div class="empty">No pages match.</div>';return}
   o.innerHTML=st.view==="grid"
-    ? `<div class="grid">${r.map(p=>`<a class="tile" href="${esc(p.file)}" title="${esc(p.title)}"><b>${esc(p.title)}</b><p>${esc(p.desc)}</p><div class="meta"><span class="file">${esc(p.file)}</span><span class="badge">${esc(p.cat)}</span></div></a>`).join("")}</div>`
-    : `<table><thead><tr><th>Title</th><th class="d">Description</th><th>Category</th><th class="d">File</th></tr></thead><tbody>${r.map(p=>`<tr><td><a href="${esc(p.file)}">${esc(p.title)}</a></td><td class="d">${esc(p.desc)}</td><td><span class="badge">${esc(p.cat)}</span></td><td class="d file">${esc(p.file)}</td></tr>`).join("")}</tbody></table>`;
+    ? `<div class="grid">${r.map(p=>`<a class="tile" style="--cc:${meta(p.cat).c}" href="${esc(p.file)}" title="${esc(p.title)}"><b>${meta(p.cat).e} ${esc(p.title)}</b><p>${esc(p.desc)}</p><div class="meta"><span class="file">${esc(p.file)}</span><span class="badge">${esc(p.cat)}</span></div></a>`).join("")}</div>`
+    : `<table><thead><tr><th>Title</th><th class="d">Description</th><th>Category</th><th class="d">File</th></tr></thead><tbody>${r.map(p=>`<tr style="--cc:${meta(p.cat).c}"><td><a href="${esc(p.file)}">${meta(p.cat).e} ${esc(p.title)}</a></td><td class="d">${esc(p.desc)}</td><td><span class="badge">${esc(p.cat)}</span></td><td class="d file">${esc(p.file)}</td></tr>`).join("")}</tbody></table>`;
   $("vGrid").classList.toggle("on",st.view==="grid");$("vList").classList.toggle("on",st.view==="list");
 }
 $("q").oninput=e=>{st.q=e.target.value;render()};
