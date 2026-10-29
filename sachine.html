@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Scahine: multi-client, multi-currency month-end consolidation with a one-page CFO dashboard and an AI report desk.">
-<title>Scahine Consolidation</title>
+<meta name="description" content="Sachine: multi-client, multi-currency month-end consolidation with a one-page CFO dashboard and an AI report desk.">
+<title>Sachine Consolidation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Schibsted+Grotesk:wght@500;600;700&display=swap">
@@ -317,7 +317,7 @@ details.dt[open] summary{margin-bottom:8px}
   <div class="bar-in gut">
     <div class="brand">
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8" fill="var(--accent)"/><path d="M8 11h16M8 16h16M8 21h10" stroke="var(--accent-ink)" stroke-width="2" stroke-linecap="round"/><circle cx="23" cy="21" r="2.2" fill="var(--accent-ink)"/></svg>
-      <div><span class="wm">Scahine</span><span class="wm-sub">Multi-currency group close</span></div>
+      <div><span class="wm">Sachine</span><span class="wm-sub">Multi-currency group close</span></div>
     </div>
     <div class="picker" id="picker">
       <label class="lbl" for="clientInput">Client</label>
@@ -722,7 +722,7 @@ function legend(items){return '<div class="legend">'+items.map(([n,cls,shape])=>
 /* ================= state ================= */
 const state={c:null,m:LAST,pres:'REP',ws:'tr',filter:'all'};
 const presCcy=()=>state.pres==='REP'?state.c.rep:state.pres;
-function defaultClient(){const saved=store.get('scahine.client');if(saved){const c=CLIENTS.find(x=>x.id===saved);if(c)return c;}
+function defaultClient(){const saved=store.get('sachine.client');if(saved){const c=CLIENTS.find(x=>x.id===saved);if(c)return c;}
   return CLIENTS.find(c=>c.status==='closed'&&c.subs.length>=5&&c.mfg&&c.traj!=='down'&&c.size>6e7&&c.size<4e8&&c.ccys.length>=4&&['EUR','USD','GBP'].includes(c.rep))||CLIENTS[0];}
 
 /* ================= portfolio band ================= */
@@ -762,7 +762,7 @@ list.addEventListener('pointerdown',e=>{const li=e.target.closest('li[data-i]');
 $('#pickFilters').addEventListener('pointerdown',e=>{const b=e.target.closest('.pf');if(!b)return;e.preventDefault();state.filter=b.dataset.f;active=0;filterList();});
 $('#picker').addEventListener('focusout',e=>{if(!$('#picker').contains(e.relatedTarget))setTimeout(()=>{if(!$('#picker').contains(document.activeElement))closePicker();},120);});
 document.addEventListener('pointerdown',e=>{if(!pop.hidden&&!$('#picker').contains(e.target)&&!e.target.closest('.cb-btn'))closePicker();});
-function selectClient(c){state.c=c;store.set('scahine.client',c.id);closePicker();$('#pickId').textContent=c.id;renderCcySel();renderDash();switchChat();}
+function selectClient(c){state.c=c;store.set('sachine.client',c.id);closePicker();$('#pickId').textContent=c.id;renderCcySel();renderDash();switchChat();}
 
 /* ================= selects ================= */
 function renderPeriodSel(){const s=$('#periodSel');s.innerHTML='<option disabled>Oct 2026 · close opens 2 Nov</option>'+MONTHS.slice().reverse().map(M=>'<option value="'+M.i+'"'+(M.i===state.m?' selected':'')+'>'+M.label+(M.i===LAST?' · latest':'')+'</option>').join('');}
