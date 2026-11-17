@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terraform Essentials</title>
+<meta name="description" content="How the Terraform CodeBuild pipeline picks provider versions from the Docker image in ECR, and how to add AWS provider 6.68+.">
+<style>
+  :root{
+    --bg:#f6f8fb; --card:#ffffff; --ink:#0f1c2e; --body:#3d4b5c; --muted:#6b7a8c; --line:#dfe5ec;
+    --panel:#fbfcfe; --code:#0f1724; --code-ink:#dbe4ef;
+    --tf:#7b42bc; --tf-soft:#f1eafb;
+    --ok:#15803d; --ok-bg:#e7f6ec;
+    --sb:#1d6fd1; --sb-bg:#e8f1fc;
+    --warn:#b45309; --warn-bg:#fff4e0;
+    --bad:#c62828; --bad-bg:#fdecec;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d1520; --card:#141e2b; --ink:#e8eef6; --body:#b9c5d3; --muted:#8696a8; --line:#253244;
+      --panel:#111a26; --code:#0a1018; --code-ink:#dbe4ef;
+      --tf:#b48cf2; --tf-soft:#241a38;
+      --ok:#4ade80; --ok-bg:#12301f;
+      --sb:#6aa8ff; --sb-bg:#14263f;
+      --warn:#fbbf24; --warn-bg:#352812;
+      --bad:#f87171; --bad-bg:#3a1616;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1520; --card:#141e2b; --ink:#e8eef6; --body:#b9c5d3; --muted:#8696a8; --line:#253244;
+    --panel:#111a26; --code:#0a1018; --code-ink:#dbe4ef;
+    --tf:#b48cf2; --tf-soft:#241a38;
+    --ok:#4ade80; --ok-bg:#12301f;
+    --sb:#6aa8ff; --sb-bg:#14263f;
+    --warn:#fbbf24; --warn-bg:#352812;
+    --bad:#f87171; --bad-bg:#3a1616;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--bg);color:var(--body);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.6;font-size:15px;}
+  h1,h2,h3{color:var(--ink);line-height:1.25;margin:0;}
+  a{color:var(--sb);}
+  code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;}
+  :not(pre)>code{background:var(--tf-soft);color:var(--tf);padding:1px 6px;border-radius:5px;font-size:.9em;overflow-wrap:anywhere;}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 16px;}
+  header.top{padding:40px 0 22px;}
+  .kick{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tf);}
+  .kick svg{width:20px;height:20px;}
+  header.top h1{font-size:32px;letter-spacing:-.02em;margin-top:8px;}
+  header.top p{max-width:780px;margin:10px 0 0;}
+  nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}
+  nav.toc a{font-size:13px;font-weight:600;text-decoration:none;color:var(--body);padding:5px 11px;border-radius:8px;border:1px solid var(--line);background:var(--card);}
+  nav.toc a:hover{border-color:var(--tf);color:var(--tf);}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:0 0 20px;scroll-margin-top:14px;}
+  .card > h2{font-size:21px;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+  .card > h2 .n{width:28px;height:28px;border-radius:8px;background:var(--tf);color:#fff;font-size:14px;display:grid;place-items:center;flex:none;}
+  .sub{color:var(--muted);margin:0 0 16px;}
+  p{margin:0 0 10px;}
+
+  .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .fact{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0;}
+  .fact b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
+  .fact span{display:block;color:var(--ink);font-weight:700;margin-top:2px;overflow-wrap:anywhere;}
+  .fact small{color:var(--muted);font-size:12.5px;}
+
+  .portal{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--tf-soft);border:1px solid var(--tf);border-radius:12px;padding:14px 16px;margin-bottom:16px;}
+  .portal .t{flex:1;min-width:240px;}
+  .portal b{color:var(--ink);}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--tf);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:9px 14px;border-radius:9px;white-space:nowrap;}
+
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;}
+  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--panel);}
+  .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;}
+  .tbl table tr:last-child td{border-bottom:0;}
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap;}
+  .p-ok{background:var(--ok-bg);color:var(--ok);} .p-sb{background:var(--sb-bg);color:var(--sb);}
+  .p-bad{background:var(--bad-bg);color:var(--bad);} .p-warn{background:var(--warn-bg);color:var(--warn);}
+
+  .diagram{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:16px;}
+  .diagram svg{display:block;width:100%;min-width:820px;height:auto;}
+  svg text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}
+  .bx{fill:var(--card);stroke:var(--line);stroke-width:1.6;}
+  .bx-tf{fill:var(--tf-soft);stroke:var(--tf);stroke-width:2;}
+  .bx-ok{fill:var(--ok-bg);stroke:var(--ok);stroke-width:2;}
+  .bx-sb{fill:var(--sb-bg);stroke:var(--sb);stroke-width:2;}
+  .t1{fill:var(--ink);font-weight:700;font-size:13px;}
+  .t2{fill:var(--muted);font-size:11px;}
+  .tm{font-family:ui-monospace,Consolas,monospace;font-size:11px;fill:var(--ink);}
+  .tok{fill:var(--ok);font-weight:700;} .tbad{fill:var(--bad);font-weight:700;}
+  .num circle{fill:var(--tf);} .num text{fill:#fff;font-weight:800;font-size:11px;}
+  .ar{fill:none;stroke:var(--muted);stroke-width:2;}
+  .ar-tf{fill:none;stroke:var(--tf);stroke-width:2;stroke-dasharray:5 4;}
+
+  ol.steps{margin:0;padding-left:22px;}
+  ol.steps li{margin:6px 0;}
+
+  .log{background:var(--code);color:var(--code-ink);border-radius:12px;padding:14px 16px;font-size:13px;overflow-x:auto;margin:0 0 14px;white-space:pre;}
+  .log .hl{background:rgba(180,140,242,.25);color:#fff;border-radius:4px;padding:0 3px;}
+  .log .c{color:#7d8ea3;}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .box{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel);}
+  .box h3{font-size:15px;margin-bottom:6px;}
+  .box.warn{border-color:var(--warn);background:var(--warn-bg);}
+  .box.warn h3{color:var(--warn);}
+
+  .codeblk{position:relative;margin:8px 0 14px;}
+  .codeblk pre{background:var(--code);color:var(--code-ink);border-radius:12px;padding:14px 16px;margin:0;font-size:13px;overflow-x:auto;line-height:1.55;}
+  .codeblk .cap{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;}
+  .copy{position:absolute;right:8px;top:28px;font:inherit;font-size:12px;font-weight:600;padding:4px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#dbe4ef;cursor:pointer;}
+  .copy:hover{background:rgba(255,255,255,.16);}
+  .codeblk pre .c{color:#7d8ea3;}
+  .codeblk pre .ph{color:#ffcf6b;}
+
+  .stepper{counter-reset:s;display:grid;gap:14px;}
+  .st{position:relative;padding-left:46px;}
+  .st::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:var(--tf);color:#fff;font-weight:800;display:grid;place-items:center;}
+  .st h3{font-size:16px;margin:4px 0 4px;}
+
+  footer{padding:6px 0 40px;font-size:12.5px;color:var(--muted);}
+  @media (max-width:820px){
+    .facts{grid-template-columns:1fr 1fr;}
+    .cols{grid-template-columns:1fr;}
+    header.top h1{font-size:26px;}
+  }
+  @media (max-width:480px){ .facts{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="kick"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4.5v5.2l4.5 2.6V7.1zM13.6 7.1v5.2l4.5-2.6V4.5zM3.4 1.6v5.2l4.5 2.6V4.2zM8.5 10.6v5.2l4.5 2.6v-5.2z" fill="currentColor"/></svg>Terraform pipeline · AWS CodeBuild</div>
+    <h1>Terraform Essentials</h1>
+    <p>This page explains how our Terraform pipeline chooses Terraform provider versions (such as AWS 6.66.0), and what to change to get AWS provider <b>6.68 or newer</b>. Terraform runs inside a Docker image stored in Amazon ECR in the prod state account. That image already contains the provider ZIPs, so the pipeline can only use providers that are in the image.</p>
+    <nav class="toc">
+      <a href="#setup">Setup</a><a href="#published">Published software</a><a href="#flow">Pipeline flow</a>
+      <a href="#log">Reading the log</a><a href="#upgrade">Add AWS 6.68+</a><a href="#trouble">Troubleshooting</a><a href="#cheat">Cheat sheet</a>
+    </nav>
+  </header>
+
+  <!-- 1. Setup -->
+  <section class="card" id="setup">
+    <h2><span class="n">1</span>Our setup</h2>
+    <div class="facts">
+      <div class="fact"><b>Runner</b><span>AWS CodeBuild</span><small>Runs on every pipeline execution</small></div>
+      <div class="fact"><b>Terraform image</b><span class="mono">terraform-docker-repo:beta</span><small>Amazon ECR · prod state account</small></div>
+      <div class="fact"><b>Build spec</b><span class="mono">apply.yml</span><small>Runs <code>. aide_scripts/apply.sh</code></small></div>
+      <div class="fact"><b>Provider source</b><span>Pre-packaged in the image</span><small>Provider ZIPs baked into the image</small></div>
+    </div>
+  </section>
+
+  <!-- 2. Published software -->
+  <section class="card" id="published">
+    <h2><span class="n">2</span>Published software on the Terraform pipeline</h2>
+    <div class="portal">
+      <div class="t"><b>Terraform software portal</b><br>
+        Lists the Terraform, provider and tool versions published for the pipeline. Check it before you raise a version constraint. Internal network or VPN only.</div>
+      <a class="btn" href="https://terraform.apissa.aws.alight.com/index.html" target="_blank" rel="noopener">Open portal ↗</a>
+    </div>
+    <p class="sub">Providers known to be in the current image <code>terraform-docker-repo:beta</code>:</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Provider</th><th>Source address</th><th>Version</th><th>Package in image</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><b>AWS</b></td><td class="mono">hashicorp/aws</td><td class="mono">5.100.0</td><td class="mono">terraform-provider-aws_5.100.0_linux_amd64.zip</td><td><span class="pill p-sb">Available</span></td></tr>
+        <tr><td><b>AWS</b></td><td class="mono">hashicorp/aws</td><td class="mono">6.66.0</td><td class="mono">terraform-provider-aws_6.66.0_linux_amd64.zip</td><td><span class="pill p-ok">Used by current lock file</span></td></tr>
+        <tr><td><b>AWS Cloud Control</b></td><td class="mono">hashicorp/awscc</td><td class="mono">1.103.0</td><td class="mono">terraform-provider-awscc_1.103.0_linux_amd64.zip</td><td><span class="pill p-sb">Available</span></td></tr>
+        <tr><td><b>AWS</b></td><td class="mono">hashicorp/aws</td><td class="mono">6.68+</td><td class="mono">—</td><td><span class="pill p-bad">Not in image yet</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- 3. Flow -->
+  <section class="card" id="flow">
+    <h2><span class="n">3</span>Pipeline flow: how a provider version gets chosen</h2>
+    <p class="sub">CodeBuild → Docker image → <code>apply.sh</code> → <code>terraform init</code> → <code>.terraform.lock.hcl</code> selects 6.66.0 → the image already has 6.66.0 → Terraform uses it.</p>
+    <div class="diagram">
+      <svg viewBox="0 0 1000 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CodeBuild pulls the Terraform image from ECR, downloads the repo, runs apply.yml and apply.sh, terraform init reads the lock file which selects AWS 6.66.0, finds the ZIP already in the image and uses it">
+        <defs>
+          <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--muted)"/></marker>
+          <marker id="at" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--tf)"/></marker>
+        </defs>
+        <!-- row 1 -->
+        <g><rect class="bx" x="16" y="30" width="140" height="66" rx="10"/><text class="t1" x="86" y="58" text-anchor="middle">CodeBuild</text><text class="t2" x="86" y="76" text-anchor="middle">pipeline starts</text></g>
+        <g><rect class="bx-tf" x="180" y="30" width="160" height="66" rx="10"/><text class="t1" x="260" y="56" text-anchor="middle">Terraform image</text><text class="tm" x="260" y="74" text-anchor="middle" style="font-size:9.5px">terraform-docker-repo:beta</text><text class="t2" x="260" y="89" text-anchor="middle">ECR · prod state account</text></g>
+        <g><rect class="bx" x="364" y="30" width="140" height="66" rx="10"/><text class="t1" x="434" y="56" text-anchor="middle">Source download</text><text class="tm" x="434" y="76" text-anchor="middle" style="font-size:10px">/codebuild/output/…/src</text></g>
+        <g><rect class="bx" x="528" y="30" width="130" height="66" rx="10"/><text class="t1" x="593" y="56" text-anchor="middle">Build spec</text><text class="tm" x="593" y="76" text-anchor="middle">apply.yml</text></g>
+        <g><rect class="bx" x="682" y="30" width="140" height="66" rx="10"/><text class="t1" x="752" y="56" text-anchor="middle">Script</text><text class="tm" x="752" y="76" text-anchor="middle" style="font-size:10px">aide_scripts/apply.sh</text></g>
+        <g><rect class="bx-sb" x="846" y="30" width="138" height="66" rx="10"/><text class="t1" x="915" y="58" text-anchor="middle">terraform init</text><text class="t2" x="915" y="76" text-anchor="middle">reads code + lock file</text></g>
+        <path class="ar" d="M156 63 H176" marker-end="url(#a)"/><path class="ar" d="M340 63 H360" marker-end="url(#a)"/>
+        <path class="ar" d="M504 63 H524" marker-end="url(#a)"/><path class="ar" d="M658 63 H678" marker-end="url(#a)"/><path class="ar" d="M822 63 H842" marker-end="url(#a)"/>
+        <!-- down -->
+        <path class="ar" d="M915 96 V170" marker-end="url(#a)"/>
+        <!-- row 2 -->
+        <g><rect class="bx-sb" x="826" y="174" width="158" height="78" rx="10"/><text class="t1" x="905" y="198" text-anchor="middle">.terraform.lock.hcl</text><text class="tm" x="905" y="218" text-anchor="middle">hashicorp/aws</text><text class="tm" x="905" y="236" text-anchor="middle">version = "6.66.0"</text></g>
+        <path class="ar" d="M826 213 H770" marker-end="url(#a)"/>
+        <g><rect class="bx-tf" x="500" y="150" width="266" height="170" rx="10"/>
+          <text class="t1" x="516" y="174">Provider ZIPs inside the image</text>
+          <text class="tm" x="516" y="200">aws_5.100.0_linux_amd64.zip</text><text class="t2" x="740" y="200" text-anchor="end">available</text>
+          <rect x="508" y="210" width="250" height="24" rx="6" style="fill:var(--ok-bg);stroke:var(--ok)"/>
+          <text class="tm" x="516" y="226">aws_6.66.0_linux_amd64.zip</text><text class="tok" x="750" y="226" text-anchor="end" font-size="11">✓ selected</text>
+          <text class="tm" x="516" y="254">awscc_1.103.0_linux_amd64.zip</text><text class="t2" x="740" y="254" text-anchor="end">available</text>
+          <text class="tm" x="516" y="286" style="fill:var(--bad)">aws_6.68+_linux_amd64.zip</text><text class="tbad" x="750" y="286" text-anchor="end" font-size="11">✗ missing</text>
+          <text class="t2" x="516" y="308">add to the image to use 6.68+</text>
+        </g>
+        <path class="ar-tf" d="M260 96 V128 H633 V146" marker-end="url(#at)"/>
+        <text class="t2" x="446" y="122" text-anchor="middle" style="fill:var(--tf);font-weight:700">image contains</text>
+        <path class="ar" d="M500 222 H446" marker-end="url(#a)"/>
+        <g><rect class="bx-ok" x="200" y="186" width="242" height="72" rx="10"/><text class="t1" x="321" y="210" text-anchor="middle">Init output</text><text class="tm" x="321" y="230" text-anchor="middle">Using previously-installed</text><text class="tm" x="321" y="246" text-anchor="middle">hashicorp/aws v6.66.0</text></g>
+        <path class="ar" d="M200 222 H160" marker-end="url(#a)"/>
+        <g><rect class="bx" x="16" y="186" width="140" height="72" rx="10"/><text class="t1" x="86" y="214" text-anchor="middle">plan / apply</text><text class="t2" x="86" y="234" text-anchor="middle">with aws 6.66.0</text></g>
+        <!-- numbers -->
+        <g class="num"><circle cx="26" cy="30" r="10"/><text x="26" y="34" text-anchor="middle">1</text></g>
+        <g class="num"><circle cx="190" cy="30" r="10"/><text x="190" y="34" text-anchor="middle">2</text></g>
+        <g class="num"><circle cx="374" cy="30" r="10"/><text x="374" y="34" text-anchor="middle">3</text></g>
+        <g class="num"><circle cx="538" cy="30" r="10"/><text x="538" y="34" text-anchor="middle">4</text></g>
+        <g class="num"><circle cx="692" cy="30" r="10"/><text x="692" y="34" text-anchor="middle">5</text></g>
+        <g class="num"><circle cx="856" cy="30" r="10"/><text x="856" y="34" text-anchor="middle">6</text></g>
+        <g class="num"><circle cx="836" cy="174" r="10"/><text x="836" y="178" text-anchor="middle">7</text></g>
+        <g class="num"><circle cx="510" cy="150" r="10"/><text x="510" y="154" text-anchor="middle">8</text></g>
+        <g class="num"><circle cx="210" cy="186" r="10"/><text x="210" y="190" text-anchor="middle">9</text></g>
+      </svg>
+    </div>
+    <ol class="steps">
+      <li>CodeBuild starts the Terraform Docker image <code>terraform-docker-repo:beta</code>.</li>
+      <li>The image already contains several provider ZIPs: AWS <b>5.100.0</b>, AWS <b>6.66.0</b> and AWSCC <b>1.103.0</b>.</li>
+      <li>CodeBuild downloads the repository into <code>/codebuild/output/…/src</code>.</li>
+      <li>It reads <code>apply.yml</code> and runs <code>. aide_scripts/apply.sh</code>.</li>
+      <li><code>apply.sh</code> runs <code>terraform init</code>.</li>
+      <li><code>terraform init</code> reads the Terraform code (<code>required_providers</code>) and <code>.terraform.lock.hcl</code>.</li>
+      <li>The lock file tells Terraform to use AWS provider <b>6.66.0</b>.</li>
+      <li>Terraform looks in the image and finds <code>terraform-provider-aws_6.66.0_linux_amd64.zip</code>.</li>
+      <li>That is why the log says <code>Using previously-installed hashicorp/aws v6.66.0</code>.</li>
+    </ol>
+  </section>
+
+  <!-- 4. Log -->
+  <section class="card" id="log">
+    <h2><span class="n">4</span>Reading the <code>terraform init</code> log</h2>
+    <pre class="log"><span class="c"># CodeBuild log, terraform init</span>
+Initializing provider plugins...
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- <span class="hl">Using previously-installed hashicorp/aws v6.66.0</span>
+
+Terraform has been successfully initialized!</pre>
+    <div class="cols">
+      <div class="box"><h3>What it means</h3><p>The lock file pinned <b>6.66.0</b>, and that exact version was already in the image, so Terraform downloaded nothing. The version comes from the lock file plus what's in the image. It is not simply the newest version available.</p></div>
+      <div class="box warn"><h3>Why 6.68+ won't appear by itself</h3><p>Even if you change the constraint to <code>&gt;= 6.68.0</code>, <code>terraform init</code> can only pick from the ZIPs in the image. Until 6.68+ is added to the image, init fails with "no available releases match the given constraints".</p></div>
+    </div>
+  </section>
+
+  <!-- 5. Upgrade -->
+  <section class="card" id="upgrade">
+    <h2><span class="n">5</span>How to get AWS provider 6.68+</h2>
+    <p class="sub">The main blocker is the image: it does not contain AWS 6.68+ yet. Add the provider to the image first, then update the code and lock file.</p>
+    <div class="stepper">
+      <div class="st">
+        <h3>Check the portal</h3>
+        <p>Open the <a href="https://terraform.apissa.aws.alight.com/index.html" target="_blank" rel="noopener">Terraform software portal</a> to see if 6.68+ is already published for the pipeline. If it is, only the image tag may need changing. If not, request or add it.</p>
+      </div>
+      <div class="st">
+        <h3>Add the provider ZIP to the Docker image</h3>
+        <p>Download the Linux build from HashiCorp, check its SHA-256, and copy it to the same folder where the image keeps the other provider ZIPs.</p>
+        <div class="codeblk"><div class="cap">Download and verify (example: 6.68.0)</div><button class="copy" type="button">Copy</button>
+<pre>V=6.68.0
+curl -fsSLO https://releases.hashicorp.com/terraform-provider-aws/${V}/terraform-provider-aws_${V}_linux_amd64.zip
+curl -fsSLO https://releases.hashicorp.com/terraform-provider-aws/${V}/terraform-provider-aws_${V}_SHA256SUMS
+grep linux_amd64 terraform-provider-aws_${V}_SHA256SUMS | sha256sum -c -</pre></div>
+        <div class="codeblk"><div class="cap">Dockerfile: add next to the existing provider ZIPs</div><button class="copy" type="button">Copy</button>
+<pre><span class="c"># Use the same directory the image already uses for the 5.100.0 / 6.66.0 / awscc ZIPs</span>
+COPY terraform-provider-aws_6.68.0_linux_amd64.zip <span class="ph">&lt;existing-provider-dir&gt;</span>/</pre></div>
+      </div>
+      <div class="st">
+        <h3>Build and push the image to ECR (prod state account)</h3>
+        <div class="codeblk"><button class="copy" type="button" style="top:8px">Copy</button>
+<pre>ACCOUNT=<span class="ph">&lt;prod-state-account-id&gt;</span>
+REGION=<span class="ph">&lt;region&gt;</span>
+REPO=$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/terraform-docker-repo
+
+aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT.dkr.ecr.$REGION.amazonaws.com
+docker build -t $REPO:beta .
+docker push $REPO:beta</pre></div>
+        <p>CodeBuild pulls <code>:beta</code>, so pushing to the same tag updates the pipeline. If you prefer a new tag, also update the CodeBuild project's image.</p>
+      </div>
+      <div class="st">
+        <h3>Update the Terraform code and lock file</h3>
+        <div class="codeblk"><div class="cap">versions.tf</div><button class="copy" type="button">Copy</button>
+<pre>terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "&gt;= 6.68.0, &lt; 7.0.0"
+    }
+  }
+}</pre></div>
+        <div class="codeblk"><div class="cap">Refresh the lock file with Linux hashes (the pipeline runs on linux_amd64)</div><button class="copy" type="button">Copy</button>
+<pre>terraform init -upgrade
+terraform providers lock -platform=linux_amd64 -platform=windows_amd64
+git add .terraform.lock.hcl versions.tf
+git commit -m "Upgrade AWS provider to 6.68"</pre></div>
+      </div>
+      <div class="st">
+        <h3>Run the pipeline and confirm</h3>
+        <p>The <code>terraform init</code> log should now show <code>Using previously-installed hashicorp/aws v6.68.x</code>. Run a plan first and check for changes caused by the new provider before you apply.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Troubleshooting -->
+  <section class="card" id="trouble">
+    <h2><span class="n">6</span>Troubleshooting</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Symptom in CodeBuild log</th><th>Cause</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">Using previously-installed hashicorp/aws v6.66.0 (wanted newer)</td><td>The lock file still pins 6.66.0.</td><td>Run <code>terraform init -upgrade</code>, then <code>terraform providers lock</code>, and commit <code>.terraform.lock.hcl</code>.</td></tr>
+        <tr><td class="mono">no available releases match the given constraints</td><td>The constraint asks for a version that isn't in the image.</td><td>Add the provider ZIP to the image (step 5.2) or relax the constraint.</td></tr>
+        <tr><td class="mono">doesn't match any of the checksums previously recorded in the dependency lock file</td><td>The lock file only has hashes for your laptop's platform.</td><td><code>terraform providers lock -platform=linux_amd64</code> and commit.</td></tr>
+        <tr><td>New image pushed but pipeline still uses old providers</td><td>CodeBuild uses a different tag or a cached image.</td><td>Check the CodeBuild project's image URI and tag. Make sure you pushed to <code>:beta</code> in the prod state account.</td></tr>
+        <tr><td class="mono">Failed to query available provider packages</td><td>CodeBuild can't reach the public registry, and the image has no matching ZIP.</td><td>The pipeline relies on providers inside the image, so add the version to the image.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- 7. Cheat sheet -->
+  <section class="card" id="cheat">
+    <h2><span class="n">7</span>Cheat sheet</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Command</th><th>Use it to</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">terraform version</td><td>Show the Terraform CLI and provider versions in use</td></tr>
+        <tr><td class="mono">terraform providers</td><td>List the providers the code needs and their constraints</td></tr>
+        <tr><td class="mono">terraform init -upgrade</td><td>Pick the newest allowed provider versions and update the lock file</td></tr>
+        <tr><td class="mono">terraform providers lock -platform=linux_amd64</td><td>Add Linux hashes to the lock file for CodeBuild</td></tr>
+        <tr><td class="mono">terraform fmt -recursive &amp;&amp; terraform validate</td><td>Format and check code before you commit</td></tr>
+        <tr><td class="mono">terraform plan -out=tfplan</td><td>Preview changes and save the plan</td></tr>
+        <tr><td class="mono">terraform show tfplan</td><td>Review a saved plan</td></tr>
+        <tr><td class="mono">terraform state list</td><td>List the resources in state</td></tr>
+        <tr><td class="mono">docker run --rm --entrypoint sh terraform-docker-repo:beta -c "find / -name 'terraform-provider-*.zip' 2&gt;/dev/null"</td><td>List the provider ZIPs inside the image</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <footer>Prepared by CloudZ13 (DB services)</footer>
+</div>
+<script>
+document.querySelectorAll('.copy').forEach(b => b.addEventListener('click', async () => {
+  const text = b.parentElement.querySelector('pre').innerText;
+  try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; }
+  catch(e) { b.textContent = 'Select & copy'; }
+  setTimeout(() => b.textContent = 'Copy', 1500);
+}));
+</script>
+</body>
+</html>
