@@ -114,8 +114,8 @@
   .codeblk pre .c{color:#7d8ea3;}
   .codeblk pre .ph{color:#ffcf6b;}
 
-  .stepper{counter-reset:s;display:grid;gap:14px;}
-  .st{position:relative;padding-left:46px;}
+  .stepper{counter-reset:s;display:grid;grid-template-columns:minmax(0,1fr);gap:14px;}
+  .st{position:relative;padding-left:46px;min-width:0;}
   .st::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:var(--tf);color:#fff;font-weight:800;display:grid;place-items:center;}
   .st h3{font-size:16px;margin:4px 0 4px;}
 
@@ -135,7 +135,7 @@
     <h1>Terraform Essentials</h1>
     <p>This page explains how our Terraform pipeline chooses Terraform provider versions (such as AWS 6.66.0), and what to change to get AWS provider <b>6.68 or newer</b>. Terraform runs inside a Docker image stored in Amazon ECR in the prod state account. That image already contains the provider ZIPs, so the pipeline can only use providers that are in the image.</p>
     <nav class="toc">
-      <a href="#setup">Setup</a><a href="#published">Published software</a><a href="#flow">Pipeline flow</a>
+      <a href="#setup">Setup</a><a href="#published">Published software</a><a href="#explore">Open an image (VDI)</a><a href="#flow">Pipeline flow</a>
       <a href="#log">Reading the log</a><a href="#upgrade">Add AWS 6.68+</a><a href="#trouble">Troubleshooting</a><a href="#cheat">Cheat sheet</a>
     </nav>
   </header>
@@ -171,9 +171,41 @@
     </table></div>
   </section>
 
-  <!-- 3. Flow -->
+  <!-- 3. Explore an image -->
+  <section class="card" id="explore">
+    <h2><span class="n">3</span>Open a shell in any Terraform image (VDI)</h2>
+    <p class="sub">Use this to see exactly what software and provider ZIPs an image contains before you use it in the pipeline.</p>
+    <div class="stepper">
+      <div class="st">
+        <h3>Log in to the VDI</h3>
+        <p>Open a terminal on your VDI.</p>
+      </div>
+      <div class="st">
+        <h3>Set up AWS access to the state account</h3>
+        <div class="codeblk"><button class="copy" type="button" style="top:8px">Copy</button>
+<pre>awsc -z
+awsc -d -a state</pre></div>
+      </div>
+      <div class="st">
+        <h3>Run the Terraform helper script</h3>
+        <div class="codeblk"><button class="copy" type="button" style="top:8px">Copy</button>
+<pre>./terraform.sh</pre></div>
+        <p>It shows the available images. Select the image you want, for example <code>terraform-docker-repo:beta</code>, and the script starts a container from it.</p>
+      </div>
+      <div class="st">
+        <h3>Check the software list, then use the shell</h3>
+        <p>The container first lists all the software installed in the image, then gives you an <code>sh</code> prompt inside it. Useful commands at the prompt:</p>
+        <div class="codeblk"><button class="copy" type="button" style="top:8px">Copy</button>
+<pre>terraform version                                         <span class="c"># Terraform CLI version</span>
+find / -name 'terraform-provider-*.zip' 2&gt;/dev/null       <span class="c"># provider ZIPs in this image</span>
+exit                                                      <span class="c"># leave the container shell</span></pre></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Flow -->
   <section class="card" id="flow">
-    <h2><span class="n">3</span>Pipeline flow: how a provider version gets chosen</h2>
+    <h2><span class="n">4</span>Pipeline flow: how a provider version gets chosen</h2>
     <p class="sub">CodeBuild → Docker image → <code>apply.sh</code> → <code>terraform init</code> → <code>.terraform.lock.hcl</code> selects 6.66.0 → the image already has 6.66.0 → Terraform uses it.</p>
     <div class="diagram">
       <svg viewBox="0 0 1000 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CodeBuild pulls the Terraform image from ECR, downloads the repo, runs apply.yml and apply.sh, terraform init reads the lock file which selects AWS 6.66.0, finds the ZIP already in the image and uses it">
@@ -237,7 +269,7 @@
 
   <!-- 4. Log -->
   <section class="card" id="log">
-    <h2><span class="n">4</span>Reading the <code>terraform init</code> log</h2>
+    <h2><span class="n">5</span>Reading the <code>terraform init</code> log</h2>
     <pre class="log"><span class="c"># CodeBuild log, terraform init</span>
 Initializing provider plugins...
 - Reusing previous version of hashicorp/aws from the dependency lock file
@@ -252,7 +284,7 @@ Terraform has been successfully initialized!</pre>
 
   <!-- 5. Upgrade -->
   <section class="card" id="upgrade">
-    <h2><span class="n">5</span>How to get AWS provider 6.68+</h2>
+    <h2><span class="n">6</span>How to get AWS provider 6.68+</h2>
     <p class="sub">The main blocker is the image: it does not contain AWS 6.68+ yet. Add the provider to the image first, then update the code and lock file.</p>
     <div class="stepper">
       <div class="st">
@@ -309,12 +341,12 @@ git commit -m "Upgrade AWS provider to 6.68"</pre></div>
 
   <!-- 6. Troubleshooting -->
   <section class="card" id="trouble">
-    <h2><span class="n">6</span>Troubleshooting</h2>
+    <h2><span class="n">7</span>Troubleshooting</h2>
     <div class="tbl"><table>
       <thead><tr><th>Symptom in CodeBuild log</th><th>Cause</th><th>Fix</th></tr></thead>
       <tbody>
         <tr><td class="mono">Using previously-installed hashicorp/aws v6.66.0 (wanted newer)</td><td>The lock file still pins 6.66.0.</td><td>Run <code>terraform init -upgrade</code>, then <code>terraform providers lock</code>, and commit <code>.terraform.lock.hcl</code>.</td></tr>
-        <tr><td class="mono">no available releases match the given constraints</td><td>The constraint asks for a version that isn't in the image.</td><td>Add the provider ZIP to the image (step 5.2) or relax the constraint.</td></tr>
+        <tr><td class="mono">no available releases match the given constraints</td><td>The constraint asks for a version that isn't in the image.</td><td>Add the provider ZIP to the image (step 6.2) or relax the constraint.</td></tr>
         <tr><td class="mono">doesn't match any of the checksums previously recorded in the dependency lock file</td><td>The lock file only has hashes for your laptop's platform.</td><td><code>terraform providers lock -platform=linux_amd64</code> and commit.</td></tr>
         <tr><td>New image pushed but pipeline still uses old providers</td><td>CodeBuild uses a different tag or a cached image.</td><td>Check the CodeBuild project's image URI and tag. Make sure you pushed to <code>:beta</code> in the prod state account.</td></tr>
         <tr><td class="mono">Failed to query available provider packages</td><td>CodeBuild can't reach the public registry, and the image has no matching ZIP.</td><td>The pipeline relies on providers inside the image, so add the version to the image.</td></tr>
@@ -324,7 +356,7 @@ git commit -m "Upgrade AWS provider to 6.68"</pre></div>
 
   <!-- 7. Cheat sheet -->
   <section class="card" id="cheat">
-    <h2><span class="n">7</span>Cheat sheet</h2>
+    <h2><span class="n">8</span>Cheat sheet</h2>
     <div class="tbl"><table>
       <thead><tr><th>Command</th><th>Use it to</th></tr></thead>
       <tbody>
